@@ -3,9 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision
 from torchvision import transforms
-from torchvision import models
-from torchvision.models.resnet import resnet34
-from torchvision.transforms.transforms import Resize
+from resnet import resnet34
  
 transform = transforms.Compose([
 transforms.Resize(224),
@@ -18,7 +16,7 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=200, shuffle=True
  
 testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform)
 testloader = torch.utils.data.DataLoader(testset, batch_size=200, shuffle=False)
-net=models.resnet34(pretrained=True)
+net=resnet34(pretrained=True)
 ##迁移学习
 for param in net.parameters(): #固定参数
     print(param.names)
