@@ -396,7 +396,8 @@ if __name__ == "__main__":
             return x
 
     # Create an instance of the nn.module class defined above:
-    net = BaseNet()
+    from resnet import resnet34 # 👈
+    net=resnet34(pretrained=True) # 👈
 
     # For training on GPU, we need to transfer net and data onto the GPU
     # http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
