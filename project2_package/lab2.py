@@ -231,7 +231,7 @@ if __name__ == "__main__":
     # <<TODO#5>> Based on the val set performance, decide how many
     # epochs are apt for your model.
     # ---------
-    EPOCHS = 15
+    EPOCHS = 100
     # ---------
 
     IS_GPU = True
@@ -296,10 +296,16 @@ if __name__ == "__main__":
     # You shouldn't have any data augmentation in test_transform (val or test data is never augmented).
     # ---------------------
 
-    train_transform = transforms.Compose(
-        [transforms.ToTensor()])
-    test_transform = transforms.Compose(
-        [transforms.ToTensor()])
+    train_transform = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))
+    ])
+    test_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))
+    ])
     # ---------------------
 
     trainset = CIFAR100_SFU_CV(root=PATH_TO_CIFAR100_SFU_CV, fold="train",
@@ -397,7 +403,9 @@ if __name__ == "__main__":
 
     # Create an instance of the nn.module class defined above:
     from resnet import resnet34 # 👈
-    net=resnet34(pretrained=True) # 👈
+    from vgg19 import vgg19 # 👈
+    # net=resnet34(pretrained=True) # 👈
+    net=vgg19(pretrained=True) # 👈
 
     # For training on GPU, we need to transfer net and data onto the GPU
     # http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
@@ -417,7 +425,11 @@ if __name__ == "__main__":
 
     # Tune the learning rate.
     # See whether the momentum is useful or not
-    optimizer = optim.SGD(net.parameters(), lr=0.005, momentum=0.9)
+    LEARNING_RATE = 0.005
+    optimizer = optim.SGD(net.parameters(), lr=LEARNING_RATE, momentum=0.9)
+
+    from torch.optim.lr_scheduler import CosineAnnealingLR
+    scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS, eta_min=1e-6)
 
     plt.ioff()
     fig = plt.figure()
@@ -466,10 +478,14 @@ if __name__ == "__main__":
 
         # Scale of 0.0 to 100.0
         # Calculate validation set accuracy of the existing model
+        net.eval()
         val_accuracy, val_classwise_accuracy = \
             calculate_val_accuracy(valloader, IS_GPU)
         print('Accuracy of the network on the val images: %d %%' % (val_accuracy))
-
+        net.train()
+        scheduler.step()
+        print("Next learning rate:", scheduler.get_lr()[0])
+        
         # # Optionally print classwise accuracies
         # for c_i in range(TOTAL_CLASSES):
         #     print('Accuracy of %5s : %2d %%' % (
