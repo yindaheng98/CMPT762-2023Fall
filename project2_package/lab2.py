@@ -227,17 +227,17 @@ class CIFAR100_SFU_CV(CIFAR10_SFU_CV):
         ['test_cs543', 'd3fe9f6a9251bd443f428f896d27384f'],
     ]
 if __name__ == "__main__":
-    # no change👇----------------------------------------------------------👇no change
+    # change!!!👇----------------------------------------------------------👇!!!change
     # <<TODO#5>> Based on the val set performance, decide how many
     # epochs are apt for your model.
     # ---------
-    EPOCHS = 120
+    EPOCHS = 200
     # ---------
 
     IS_GPU = True
-    TEST_BS = 800
+    TEST_BS = 128
     TOTAL_CLASSES = 100
-    TRAIN_BS = 400
+    TRAIN_BS = 128
     PATH_TO_CIFAR100_SFU_CV = "./data/"
     # no change👇----------------------------------------------------------👇no change
     def calculate_val_accuracy(valloader, is_gpu):
@@ -256,7 +256,7 @@ if __name__ == "__main__":
         class_correct = list(0. for i in range(TOTAL_CLASSES))
         class_total = list(0. for i in range(TOTAL_CLASSES))
 
-        for data in valloader:
+        for data in tqdm(valloader):
             images, labels = data
             if is_gpu:
                 images = images.cuda()
@@ -281,7 +281,7 @@ if __name__ == "__main__":
 
         class_accuracy = 100 * np.divide(class_correct, class_total)
         return 100*correct/total, class_accuracy
-    # no change👇----------------------------------------------------------👇no change
+    # change!!!👇----------------------------------------------------------👇!!!change
     # The output of torchvision datasets are PILImage images of range [0, 1].
     # Using transforms.ToTensor(), transform them to Tensors of normalized range
     # [-1, 1].
@@ -296,34 +296,37 @@ if __name__ == "__main__":
     # You shouldn't have any data augmentation in test_transform (val or test data is never augmented).
     # ---------------------
 
+    CIFAR100_TRAIN_MEAN = (0.5070751592371323, 0.48654887331495095, 0.4409178433670343) # 👈
+    CIFAR100_TRAIN_STD = (0.2673342858792401, 0.2564384629170883, 0.27615047132568404) # 👈
     train_transform = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
         transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(15),
         transforms.ToTensor(),
-        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))
+        transforms.Normalize(CIFAR100_TRAIN_MEAN, CIFAR100_TRAIN_STD)
     ])
     test_transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761))
+        transforms.Normalize(CIFAR100_TRAIN_MEAN, CIFAR100_TRAIN_STD)
     ])
     # ---------------------
 
     trainset = CIFAR100_SFU_CV(root=PATH_TO_CIFAR100_SFU_CV, fold="train",
                                             download=True, transform=train_transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=TRAIN_BS,
-                                            shuffle=True, num_workers=2)
+                                            shuffle=True, num_workers=4)
     print("Train set size: "+str(len(trainset)))
 
     valset = CIFAR100_SFU_CV(root=PATH_TO_CIFAR100_SFU_CV, fold="val",
                                         download=True, transform=test_transform)
     valloader = torch.utils.data.DataLoader(valset, batch_size=TEST_BS,
-                                            shuffle=False, num_workers=2)
+                                            shuffle=False, num_workers=4)
     print("Val set size: "+str(len(valset)))
 
     testset = CIFAR100_SFU_CV(root=PATH_TO_CIFAR100_SFU_CV, fold="test",
                                         download=True, transform=test_transform)
     testloader = torch.utils.data.DataLoader(testset, batch_size=TEST_BS,
-                                            shuffle=False, num_workers=2)
+                                            shuffle=False, num_workers=4)
     print("Test set size: "+str(len(testset)))
 
     # The 100 classes for CIFAR100
@@ -431,13 +434,12 @@ if __name__ == "__main__":
     # net=resnet.resnet50(pretrained=True) # 👈
     # net=vgg19(pretrained=True) # 👈
     net=resnet.resnet50() # 👈
-    net.load_state_dict(torch.load("data/resnet50-60-regular.pth")) # 👈
 
     # For training on GPU, we need to transfer net and data onto the GPU
     # http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
     if IS_GPU:
         net = net.cuda()
-    # no change👇----------------------------------------------------------👇no change
+    # change!!!👇----------------------------------------------------------👇!!!change
     ########################################################################
     # 3. Define a Loss function and optimizer
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -446,16 +448,17 @@ if __name__ == "__main__":
     # implementation. That's why we don't use a softmax in our model
     # definition.
 
+    from tqdm import tqdm
     import torch.optim as optim
     criterion = nn.CrossEntropyLoss()
 
     # Tune the learning rate.
     # See whether the momentum is useful or not
-    LEARNING_RATE = 0.001 # 👈
-    optimizer = optim.Adam(net.parameters(), lr=LEARNING_RATE, weight_decay=0.001) # 👈
+    LEARNING_RATE = 0.1 # 👈
+    optimizer = optim.SGD(net.parameters(), lr=LEARNING_RATE, momentum=0.9, weight_decay=5e-4) # 👈
 
-    from torch.optim.lr_scheduler import CosineAnnealingLR
-    scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS, eta_min=1e-6)
+    from torch.optim.lr_scheduler import MultiStepLR
+    scheduler = MultiStepLR(optimizer, milestones=[60, 120, 160], gamma=0.2) #learning rate decay
 
     plt.ioff()
     fig = plt.figure()
@@ -474,7 +477,7 @@ if __name__ == "__main__":
     for epoch in range(EPOCHS):  # loop over the dataset multiple times
 
         running_loss = 0.0
-        for i, data in enumerate(trainloader, 0):
+        for i, data in tqdm(enumerate(trainloader, 0), total=len(trainloader)):
             # get the inputs
             inputs, labels = data
 
@@ -557,7 +560,7 @@ if __name__ == "__main__":
 
     total = 0
     predictions = []
-    for data in testloader:
+    for data in tqdm(testloader):
         images, labels = data
 
         # For training on GPU, we need to transfer net and data onto the GPU
