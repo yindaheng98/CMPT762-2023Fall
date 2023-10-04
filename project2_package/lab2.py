@@ -358,7 +358,7 @@ if __name__ == "__main__":
         expansion = 4
         def __init__(self, in_channels, out_channels, stride=1):
             super().__init__()
-            self.residual_function = nn.Sequential(
+            self.residual = nn.Sequential(
                 nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
                 nn.BatchNorm2d(out_channels),
                 nn.ReLU(inplace=True),
@@ -369,16 +369,16 @@ if __name__ == "__main__":
                 nn.BatchNorm2d(out_channels * ResBlock.expansion),
             )
 
-            self.shortcut = nn.Sequential()
+            self.residual_fit = nn.Sequential()
 
             if stride != 1 or in_channels != out_channels * ResBlock.expansion:
-                self.shortcut = nn.Sequential(
+                self.residual_fit = nn.Sequential(
                     nn.Conv2d(in_channels, out_channels * ResBlock.expansion, stride=stride, kernel_size=1, bias=False),
                     nn.BatchNorm2d(out_channels * ResBlock.expansion)
                 )
 
         def forward(self, x):
-            return nn.ReLU(inplace=True)(self.residual_function(x) + self.shortcut(x))
+            return nn.ReLU(inplace=True)(self.residual(x) + self.residual_fit(x))
 
     class BaseNet(nn.Module):
 
@@ -392,12 +392,12 @@ if __name__ == "__main__":
                 nn.BatchNorm2d(64),
                 nn.ReLU(inplace=True))
             #we use a different inputsize than the original paper
-            #so conv2_x's stride is 1
-            self.conv2_x = self.resblock(64, 3, 1)
-            self.conv3_x = self.resblock(128, 4, 2)
-            self.conv4_x = self.resblock(256, 6, 2)
-            self.conv5_x = self.resblock(512, 3, 2)
-            self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+            #so resblock1's stride is 1
+            self.resblock1 = self.resblock(64, 3, 1)
+            self.resblock2 = self.resblock(128, 4, 2)
+            self.resblock3 = self.resblock(256, 6, 2)
+            self.resblock4 = self.resblock(512, 3, 2)
+            self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
             self.fc = nn.Linear(512 * ResBlock.expansion, TOTAL_CLASSES)
 
         def resblock(self, out_channels, num_blocks, stride):
@@ -409,11 +409,11 @@ if __name__ == "__main__":
 
         def forward(self, x):
             output = self.conv1(x)
-            output = self.conv2_x(output)
-            output = self.conv3_x(output)
-            output = self.conv4_x(output)
-            output = self.conv5_x(output)
-            output = self.avg_pool(output)
+            output = self.resblock1(output)
+            output = self.resblock2(output)
+            output = self.resblock3(output)
+            output = self.resblock4(output)
+            output = self.avgpool(output)
             output = output.view(output.size(0), -1)
             output = self.fc(output)
 
@@ -421,6 +421,8 @@ if __name__ == "__main__":
 
     # Create an instance of the nn.module class defined above:
     net=BaseNet() # 👈
+    # from convet import convert_state_dict # 👈
+    # net.load_state_dict(convert_state_dict(torch.load("data/resnet50-009-30.44.pth"))) # 👈
 
     # For training on GPU, we need to transfer net and data onto the GPU
     # http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
