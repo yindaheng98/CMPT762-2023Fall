@@ -351,65 +351,76 @@ if __name__ == "__main__":
     import torch.nn as nn
     import torch.nn.functional as F
 
-    class BaseNet(nn.Module):
-        def __init__(self):
-            super(BaseNet, self).__init__()
-            
-            # <<TODO#3>> Add more conv layers with increasing 
-            # output channels
-            # <<TODO#4>> Add normalization layers after conv
-            # layers (nn.BatchNorm2d)
+    class ResBlock(nn.Module):
+        """Residual block for resnet over 50 layers
 
-            # Also experiment with kernel size in conv2d layers (say 3
-            # inspired from VGGNet)
-            # To keep it simple, keep the same kernel size
-            # (right now set to 5) in all conv layers.
-            # Do not have a maxpool layer after every conv layer in your
-            # deeper network as it leads to too much loss of information.
-
-            self.conv1 = nn.Conv2d(3, 6, 5)
-            self.pool = nn.MaxPool2d(2, 2)
-            self.conv2 = nn.Conv2d(6, 16, 5)
-
-            # <<TODO#3>> Add more linear (fc) layers
-            # <<TODO#4>> Add normalization layers after linear and
-            # experiment inserting them before or after ReLU (nn.BatchNorm1d)
-            # More on nn.sequential:
-            # http://pytorch.org/docs/master/nn.html#torch.nn.Sequential
-            
-            self.fc_net = nn.Sequential(
-                nn.Linear(16 * 5 * 5, TOTAL_CLASSES//2),
+        """
+        expansion = 4
+        def __init__(self, in_channels, out_channels, stride=1):
+            super().__init__()
+            self.residual_function = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
+                nn.BatchNorm2d(out_channels),
                 nn.ReLU(inplace=True),
-                nn.Linear(TOTAL_CLASSES//2, TOTAL_CLASSES),
+                nn.Conv2d(out_channels, out_channels, stride=stride, kernel_size=3, padding=1, bias=False),
+                nn.BatchNorm2d(out_channels),
+                nn.ReLU(inplace=True),
+                nn.Conv2d(out_channels, out_channels * ResBlock.expansion, kernel_size=1, bias=False),
+                nn.BatchNorm2d(out_channels * ResBlock.expansion),
             )
 
+            self.shortcut = nn.Sequential()
+
+            if stride != 1 or in_channels != out_channels * ResBlock.expansion:
+                self.shortcut = nn.Sequential(
+                    nn.Conv2d(in_channels, out_channels * ResBlock.expansion, stride=stride, kernel_size=1, bias=False),
+                    nn.BatchNorm2d(out_channels * ResBlock.expansion)
+                )
+
         def forward(self, x):
+            return nn.ReLU(inplace=True)(self.residual_function(x) + self.shortcut(x))
 
-            # <<TODO#3&#4>> Based on the above edits, you'll have
-            # to edit the forward pass description here.
+    class BaseNet(nn.Module):
 
-            x = self.pool(F.relu(self.conv1(x)))
-            # Output size = 28//2 x 28//2 = 14 x 14
+        def __init__(self):
+            super().__init__()
 
-            x = self.pool(F.relu(self.conv2(x)))
-            # Output size = 10//2 x 10//2 = 5 x 5
+            self.in_channels = 64
 
-            # See the CS231 link to understand why this is 16*5*5!
-            # This will help you design your own deeper network
-            x = x.view(-1, 16 * 5 * 5)
-            x = self.fc_net(x)
+            self.conv1 = nn.Sequential(
+                nn.Conv2d(3, 64, kernel_size=3, padding=1, bias=False),
+                nn.BatchNorm2d(64),
+                nn.ReLU(inplace=True))
+            #we use a different inputsize than the original paper
+            #so conv2_x's stride is 1
+            self.conv2_x = self.resblock(64, 3, 1)
+            self.conv3_x = self.resblock(128, 4, 2)
+            self.conv4_x = self.resblock(256, 6, 2)
+            self.conv5_x = self.resblock(512, 3, 2)
+            self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+            self.fc = nn.Linear(512 * ResBlock.expansion, TOTAL_CLASSES)
 
-            # No softmax is needed as the loss function in step 3
-            # takes care of that
-            
-            return x
+        def resblock(self, out_channels, num_blocks, stride):
+            layers = []
+            for stride in [stride] + [1] * (num_blocks - 1):
+                layers.append(ResBlock(self.in_channels, out_channels, stride))
+                self.in_channels = out_channels * ResBlock.expansion
+            return nn.Sequential(*layers)
+
+        def forward(self, x):
+            output = self.conv1(x)
+            output = self.conv2_x(output)
+            output = self.conv3_x(output)
+            output = self.conv4_x(output)
+            output = self.conv5_x(output)
+            output = self.avg_pool(output)
+            output = output.view(output.size(0), -1)
+            output = self.fc(output)
+
+            return output
 
     # Create an instance of the nn.module class defined above:
-    import resnet2 as resnet # 👈
-    # from vgg19 import vgg19 # 👈
-    # net=resnet.resnet50(pretrained=True) # 👈
-    # net=vgg19(pretrained=True) # 👈
-    net=resnet.resnet50() # 👈
+    net=BaseNet() # 👈
 
     # For training on GPU, we need to transfer net and data onto the GPU
     # http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
