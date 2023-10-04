@@ -231,13 +231,13 @@ if __name__ == "__main__":
     # <<TODO#5>> Based on the val set performance, decide how many
     # epochs are apt for your model.
     # ---------
-    EPOCHS = 100
+    EPOCHS = 120
     # ---------
 
     IS_GPU = True
-    TEST_BS = 256
+    TEST_BS = 800
     TOTAL_CLASSES = 100
-    TRAIN_BS = 32
+    TRAIN_BS = 400
     PATH_TO_CIFAR100_SFU_CV = "./data/"
     # no change👇----------------------------------------------------------👇no change
     def calculate_val_accuracy(valloader, is_gpu):
@@ -330,6 +330,30 @@ if __name__ == "__main__":
     classes = ['apple', 'aquarium_fish', 'baby', 'bear', 'beaver', 'bed', 'bee', 'beetle', 'bicycle', 'bottle', 'bowl', 'boy', 'bridge', 'bus', 'butterfly', 'camel', 'can', 'castle', 'caterpillar', 'cattle', 'chair', 'chimpanzee', 'clock', 'cloud', 'cockroach', 'couch', 'crab', 'crocodile', 'cup', 'dinosaur', 'dolphin', 'elephant', 'flatfish', 'forest', 'fox', 'girl', 'hamster', 'house', 'kangaroo', 'keyboard', 'lamp', 'lawn_mower', 'leopard', 'lion', 'lizard', 'lobster', 'man', 'maple_tree', 'motorcycle', 'mountain', 'mouse', 'mushroom', 'oak_tree', 'orange', 'orchid', 'otter', 'palm_tree', 'pear', 'pickup_truck', 'pine_tree', 'plain', 'plate', 'poppy', 'porcupine', 'possum', 'rabbit', 'raccoon', 'ray', 'road', 'rocket', 'rose', 'sea', 'seal', 'shark', 'shrew', 'skunk', 'skyscraper', 'snail', 'snake', 'spider', 'squirrel', 'streetcar', 'sunflower', 'sweet_pepper', 'table', 'tank', 'telephone', 'television', 'tiger', 'tractor', 'train', 'trout', 'tulip', 'turtle', 'wardrobe', 'whale', 'willow_tree', 'wolf', 'woman', 'worm']
 
     # change!!!👇----------------------------------------------------------👇!!!change
+    
+    # Stick all the images together to form a 45000 X 3 X 32 X 32 array
+    x = np.stack([np.asarray(trainset[i][0]) for i in range(len(trainset))])
+
+    # calculate the mean and std along the (0, 1) axes
+    mean = np.mean(x, axis=(0, 2, 3))
+    std = np.std(x, axis=(0, 2, 3))
+    # the the mean and std
+    mean=mean.tolist()
+    std=std.tolist()
+
+    train_transform = transforms.Compose([
+        transforms.RandomCrop(32, padding=4, padding_mode='reflect'),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std, inplace=True)
+    ])
+    test_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ])
+    print('transforms.Normalize(', mean,',', std, ')')
+    
+    # change!!!👇----------------------------------------------------------👇!!!change
     ########################################################################
     # 2. Define a Convolution Neural Network
     # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -402,10 +426,10 @@ if __name__ == "__main__":
             return x
 
     # Create an instance of the nn.module class defined above:
-    from resnet import resnet34 # 👈
+    import resnet # 👈
     from vgg19 import vgg19 # 👈
-    # net=resnet34(pretrained=True) # 👈
-    net=vgg19(pretrained=True) # 👈
+    net=resnet.resnet50(pretrained=True) # 👈
+    # net=vgg19(pretrained=True) # 👈
 
     # For training on GPU, we need to transfer net and data onto the GPU
     # http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
@@ -425,8 +449,8 @@ if __name__ == "__main__":
 
     # Tune the learning rate.
     # See whether the momentum is useful or not
-    LEARNING_RATE = 0.005
-    optimizer = optim.SGD(net.parameters(), lr=LEARNING_RATE, momentum=0.9)
+    LEARNING_RATE = 0.001 # 👈
+    optimizer = optim.Adam(net.parameters(), lr=LEARNING_RATE, weight_decay=0.001) # 👈
 
     from torch.optim.lr_scheduler import CosineAnnealingLR
     scheduler = CosineAnnealingLR(optimizer, T_max=EPOCHS, eta_min=1e-6)
@@ -484,7 +508,7 @@ if __name__ == "__main__":
         print('Accuracy of the network on the val images: %d %%' % (val_accuracy))
         net.train()
         scheduler.step()
-        print("Next learning rate:", scheduler.get_lr()[0])
+        print("Next learning rate:", scheduler.get_last_lr())
         
         # # Optionally print classwise accuracies
         # for c_i in range(TOTAL_CLASSES):
