@@ -31,9 +31,9 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 
-np.random.seed(111)
-torch.cuda.manual_seed_all(111)
-torch.manual_seed(111)
+# np.random.seed(111)
+# torch.cuda.manual_seed_all(111)
+# torch.manual_seed(111)
 # no change👇----------------------------------------------------------👇no change
 """"""
 
@@ -487,6 +487,7 @@ if __name__ == "__main__":
         val_accuracy, val_classwise_accuracy = \
             calculate_val_accuracy(valloader, IS_GPU)
         print('Accuracy of the network on the val images: %d %%' % (val_accuracy))
+        torch.save(net.state_dict(), os.path.join("data", "resnet50-%03d-%s.pth" % (epoch + 1, val_accuracy)))
         net.train()
         scheduler.step()
         print("Next learning rate:", scheduler.get_last_lr())
