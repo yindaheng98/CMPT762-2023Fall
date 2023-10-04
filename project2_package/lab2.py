@@ -426,10 +426,12 @@ if __name__ == "__main__":
             return x
 
     # Create an instance of the nn.module class defined above:
-    import resnet # 👈
-    from vgg19 import vgg19 # 👈
-    net=resnet.resnet50(pretrained=True) # 👈
+    import resnet2 as resnet # 👈
+    # from vgg19 import vgg19 # 👈
+    # net=resnet.resnet50(pretrained=True) # 👈
     # net=vgg19(pretrained=True) # 👈
+    net=resnet.resnet50() # 👈
+    net.load_state_dict(torch.load("data/resnet50-60-regular.pth")) # 👈
 
     # For training on GPU, we need to transfer net and data onto the GPU
     # http://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html#training-on-gpu
