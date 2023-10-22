@@ -125,7 +125,6 @@ class FarSeg(CVModule):
         self.decoder = AssymetricDecoder(**self.config.decoder)
         self.cls_pred_conv = nn.Conv2d(self.config.decoder.out_channels, self.config.num_classes, 1)
         self.upsample4x_op = nn.UpsamplingBilinear2d(scale_factor=4)
-        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         if 'scene_relation' in self.config:
             print('scene_relation: on')
             self.gap = scm.GlobalAvgPool2D()
@@ -140,7 +139,7 @@ class FarSeg(CVModule):
         if 'annealing_softmax_focalloss' in self.config:
             print('loss type: {}'.format(self.config.annealing_softmax_focalloss.annealing_type))
 
-    def forward(self, x, y=None):
+    def forward(self, x):
         feat_list = self.en(x)
         fpn_feat_list = self.fpn(feat_list)
         if 'scene_relation' in self.config:
@@ -153,17 +152,6 @@ class FarSeg(CVModule):
         final_feat = self.decoder(refined_fpn_feat_list)
         cls_pred = self.cls_pred_conv(final_feat)
         cls_pred = self.upsample4x_op(cls_pred)
-
-        if self.training:
-            cls_true = y['cls']
-            loss_dict = dict()
-            self.buffer_step += 1
-            cls_loss_v = self.config.loss.cls_weight * self.cls_loss(cls_pred, cls_true)
-            loss_dict['cls_loss'] = cls_loss_v
-
-            mem = torch.cuda.max_memory_allocated() // 1024 // 1024
-            loss_dict['mem'] = torch.from_numpy(np.array([mem], dtype=np.float32)).to(self.device)
-            return loss_dict
 
         return cls_pred.softmax(dim=1)
 

@@ -177,7 +177,7 @@ def get_instance_sample(data, idx, img=None):
     cache_path = os.path.join(cache_dir, os.path.basename(data['file_name']) + f"-{idx}.png")
     if not os.path.isfile(cache_path):
         if data['file_name'] not in big_cache:
-            if len(big_cache) >= 4:
+            if len(big_cache) >= 2:
                 big_cache[queue.pop()] = None
             big_cache[data['file_name']] = cv2.imread(data['file_name'])
             queue.append(data['file_name'])
@@ -261,18 +261,33 @@ model = model.eval() # chaning the model to evaluation mode will fix the bachnor
 loader, dataset = get_plane_dataset('train', batch_size)
 
 total_iou = 0
+images = 0
+SMOOTH = 1e-6
 for (img, mask) in tqdm(loader):
   with torch.no_grad():
     img = img.cuda()
     mask = mask.cuda()
     pred = model(img)
+    pred = pred[:, 0, :, :].squeeze(1)  # BATCH x 1 x H x W => BATCH x H x W
+    pred = pred > 0.5
+    mask = mask > 0.5
+    
+    intersection = (pred & mask).float().sum((1, 2))  # Will be zero if Truth=0 or Prediction=0
+    union = (pred | mask).float().sum((1, 2))         # Will be zzero if both are 0
+    
+    iou = (intersection + SMOOTH) / (union + SMOOTH)  # We smooth our devision to avoid 0/0
+    
+    thresholded = torch.clamp(20 * (iou - 0.5), 0, 10).ceil() / 10  # This is equal to comparing with thresolds
+    
+    total_iou += sum(thresholded.tolist())
+    images += len(thresholded.tolist())
 
     '''
     ## Complete the code by obtaining the IoU for each img and print the final Mean IoU
     '''
 
 
-print("\n #images: {}, Mean IoU: {}".format(_, _))
+print("\n #images: {}, Mean IoU: {}".format(images, total_iou/images))
 
 '''
 # Visualize 3 sample outputs

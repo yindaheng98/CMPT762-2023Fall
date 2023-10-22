@@ -15,7 +15,7 @@ model_urls = {
 }
 
 
-def farseg_resnet50(pretrained=False, progress=True):
+def farseg_resnet50(pretrained=True, progress=True):
     model_cfg = dict(
         type='FarSeg',
         params=dict(
@@ -59,8 +59,7 @@ def farseg_resnet50(pretrained=False, progress=True):
         state_dict = load_state_dict_from_url(model_urls['farseg_resnet50_isaid'], progress=progress)
         model_state_dict = state_dict['model']
         model_state_dict = {k.replace('module.', ''): v for k, v in model_state_dict.items()}
-        model.load_state_dict(model_state_dict)
-        model.eval()
+        model.load_state_dict(model_state_dict, strict=False)
         return model
     else:
         return model
