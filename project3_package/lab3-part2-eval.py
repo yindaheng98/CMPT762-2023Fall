@@ -247,47 +247,6 @@ def get_plane_dataset(set_name='train', batch_size=2):
 
 from hubconf import farseg_resnet50 as MyModel
 
-"""### Training"""
-
-'''
-# The following is a basic training procedure to train the network
-# You need to update the code to get the best performance
-# TODO: approx ? lines
-'''
-
-# Set the hyperparameters
-num_epochs = 5
-batch_size = 32
-learning_rate = 0.01
-weight_decay = 1e-5
-
-model = MyModel() # initialize the model
-model = model.cuda() # move the model to GPU
-loader, _ = get_plane_dataset('train', batch_size) # initialize data_loader
-crit = nn.BCEWithLogitsLoss() # Define the loss function
-optim = torch.optim.SGD(model.parameters(), lr=learning_rate, weight_decay=weight_decay) # Initialize the optimizer as SGD
-
-# start the training procedure
-for epoch in range(num_epochs):
-  total_loss = 0
-  for (img, mask) in tqdm(loader):
-    img = img.to(device=torch.device('cuda'))
-    mask = mask.to(device=torch.device('cuda'))
-    pred = model(img)
-    pred_mask = pred[:, 0, ...].squeeze(1)
-    loss = crit(pred_mask, mask)
-    optim.zero_grad()
-    loss.backward()
-    optim.step()
-    total_loss += loss.cpu().data
-  print("Epoch: {}, Loss: {}".format(epoch, total_loss/len(loader)))
-  torch.save(model.state_dict(), '{}/output/{}_segmentation_model.pth'.format(BASE_DIR, epoch))
-
-'''
-# Saving the final model
-'''
-torch.save(model.state_dict(), '{}/output/final_segmentation_model.pth'.format(BASE_DIR))
-
 """### Evaluation and Visualization"""
 
 '''
@@ -306,7 +265,6 @@ for (img, mask) in tqdm(loader):
   with torch.no_grad():
     img = img.cuda()
     mask = mask.cuda()
-    mask = torch.unsqueeze(mask,1)
     pred = model(img)
 
     '''
