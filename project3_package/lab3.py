@@ -295,7 +295,7 @@ torch.save(model.state_dict(), '{}/output/final_segmentation_model.pth'.format(B
 # You may load the trained model again, in case if you want to continue your code later
 # TODO: approx 15 lines
 '''
-batch_size = 8
+batch_size = 64
 model = MyModel().cuda()
 model.load_state_dict(torch.load('{}/output/final_segmentation_model.pth'.format(BASE_DIR)))
 model = model.eval() # chaning the model to evaluation mode will fix the bachnorm layers
