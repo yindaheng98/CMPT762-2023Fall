@@ -168,6 +168,7 @@ from detectron2.utils.visualizer import GenericMask
 cache_dir = os.path.join(BASE_DIR, "data", "cache")
 os.makedirs(cache_dir, exist_ok=True)
 big_cache = {}
+queue = []
 def get_instance_sample(data, idx, img=None):
     height, width = data['height'], data['width']
     bbox = data['annotations'][idx]['bbox']
@@ -176,7 +177,10 @@ def get_instance_sample(data, idx, img=None):
     cache_path = os.path.join(cache_dir, os.path.basename(data['file_name']) + f"-{idx}.png")
     if not os.path.isfile(cache_path):
         if data['file_name'] not in big_cache:
-            big_cache = {data['file_name']: cv2.imread(data['file_name'])}
+            if len(big_cache) >= 4:
+                big_cache[queue.pop()] = None
+            big_cache[data['file_name']] = cv2.imread(data['file_name'])
+            queue.append(data['file_name'])
         cv2.imwrite(cache_path, big_cache[data['file_name']][y1:y2,x1:x2,:])
     obj_img = cv2.imread(cache_path)
     obj_mask = GenericMask(data['annotations'][idx]['segmentation'], height, width).mask[y1:y2,x1:x2]
@@ -236,7 +240,7 @@ class PlaneDataset(Dataset):
 def get_plane_dataset(set_name='train', batch_size=2):
     my_data_list = DatasetCatalog.get("data_detection_{}".format(set_name))
     dataset = PlaneDataset(set_name, my_data_list)
-    loader = DataLoader(dataset, batch_size=batch_size, num_workers=4, pin_memory=True, shuffle=True)
+    loader = DataLoader(dataset, batch_size=batch_size, num_workers=16, pin_memory=True, shuffle=False)
     return loader, dataset
 
 """### Network"""
