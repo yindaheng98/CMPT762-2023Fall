@@ -22,9 +22,8 @@ class EncoderDecoder(BaseSegmentor):
                  decode_head,
                  train_cfg=None,
                  test_cfg=None,
-                 pretrained=None,
-                 init_cfg=None):
-        super(EncoderDecoder, self).__init__(init_cfg)
+                 pretrained=None):
+        super(EncoderDecoder, self).__init__()
         if pretrained is not None:
             assert backbone.get('pretrained') is None, \
                 'both backbone and segmentor set pretrained weight'

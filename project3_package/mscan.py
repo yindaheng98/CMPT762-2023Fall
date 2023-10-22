@@ -173,12 +173,9 @@ class MSCAN(nn.Module):
                  depths=[3, 4, 6, 3],
                  num_stages=4,
                  norm_cfg=dict(type='SyncBN', requires_grad=True),
-                 pretrained=None,
-                 init_cfg=None):
-        super(MSCAN, self).__init__(init_cfg=init_cfg)
+                 pretrained=None):
+        super(MSCAN, self).__init__()
 
-        assert not (init_cfg and pretrained), \
-            'init_cfg and pretrained cannot be set at the same time'
         if isinstance(pretrained, str):
             warnings.warn('DeprecationWarning: pretrained is deprecated, '
                           'please use "init_cfg" instead')

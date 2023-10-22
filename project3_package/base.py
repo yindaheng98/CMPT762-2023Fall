@@ -12,8 +12,8 @@ import torch.nn as nn
 class BaseSegmentor(nn.Module, metaclass=ABCMeta):
     """Base class for segmentors."""
 
-    def __init__(self, init_cfg=None):
-        super(BaseSegmentor, self).__init__(init_cfg)
+    def __init__(self):
+        super(BaseSegmentor, self).__init__()
         self.fp16_enabled = False
 
     @property
