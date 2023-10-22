@@ -258,7 +258,7 @@ batch_size = 64
 model = MyModel().cuda()
 model.load_state_dict(torch.load('{}/output/final_segmentation_model.pth'.format(BASE_DIR)))
 model = model.eval() # chaning the model to evaluation mode will fix the bachnorm layers
-loader, dataset = get_plane_dataset('train', batch_size)
+loader, dataset = get_plane_dataset('val', batch_size)
 
 total_iou = 0
 images = 0
