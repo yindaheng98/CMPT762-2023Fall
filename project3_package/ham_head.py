@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from conv_module import ConvModule
 
 from others import resize
+from decode_head import BaseDecodeHead
 
 
 class _MatrixDecomposition2DBase(nn.Module):
@@ -178,7 +179,7 @@ class Hamburger(nn.Module):
         return ham
 
 
-class LightHamHead(nn.Module):
+class LightHamHead(BaseDecodeHead):
     """Is Attention Better Than Matrix Decomposition?
     This head is the implementation of `HamNet
     <https://arxiv.org/abs/2109.04553>`_.

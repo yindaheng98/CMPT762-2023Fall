@@ -98,7 +98,7 @@ class ConvModule(nn.Module):
         self.with_bias = bias
 
         # reset padding to 0 for conv module
-        conv_padding = 0 if self.with_explicit_padding else padding
+        conv_padding = padding
         # build convolution layer
         self.conv = nn.Conv2d(
             in_channels,
@@ -130,7 +130,7 @@ class ConvModule(nn.Module):
                 norm_channels = out_channels
             else:
                 norm_channels = in_channels
-            self.norm_name, norm = 'gn', nn.GroupNorm(norm_channels)  # type: ignore
+            self.norm_name, norm = 'gn', nn.GroupNorm(norm_cfg['num_groups'], norm_channels)  # type: ignore
             self.add_module(self.norm_name, norm)
         else:
             self.norm_name = None  # type: ignore
