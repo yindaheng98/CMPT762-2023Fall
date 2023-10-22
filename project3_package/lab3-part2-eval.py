@@ -197,8 +197,11 @@ def get_instance_sample(data, idx, img=None):
 class PlaneDataset(Dataset):
     def __init__(self, set_name, data_list):
         self.transforms = transforms.Compose([
+            transforms.RandomHorizontalFlip(0.5),
+            transforms.RandomVerticalFlip(0.5),
+            transforms.RandomRotation(45),
             transforms.ToTensor(), # Converting the image to tensor and change the image format (Channels-Last => Channels-First)
-            transforms.Normalize((123.675, 116.28, 103.53), (58.395, 57.12, 57.375))
+            transforms.Normalize((123.675, 116.28, 103.53), (58.395, 57.12, 57.375)),
         ])
         self.set_name = set_name
         self.data = data_list
@@ -269,8 +272,8 @@ for (img, mask) in tqdm(loader):
     mask = mask.cuda()
     pred = model(img)
     pred = pred[:, 0, :, :].squeeze(1)  # BATCH x 1 x H x W => BATCH x H x W
-    pred = pred > 0.5
-    mask = mask > 0.5
+    pred = pred > 0.6
+    mask = mask > 0.6
     
     intersection = (pred & mask).float().sum((1, 2))  # Will be zero if Truth=0 or Prediction=0
     union = (pred | mask).float().sum((1, 2))         # Will be zzero if both are 0
@@ -293,3 +296,25 @@ print("\n #images: {}, Mean IoU: {}".format(images, total_iou/images))
 # Visualize 3 sample outputs
 # TODO: approx 5 lines
 '''
+import matplotlib.pyplot as plt
+for (img, mask) in loader:
+    break
+with torch.no_grad():
+  img = img.cuda()
+  mask = mask.cuda()
+  pred = model(img)
+  pred = pred[:, 0, :, :].squeeze(1)  # BATCH x 1 x H x W => BATCH x H x W
+  pred[pred > 0.6] = 255
+  pred[pred <= 0.6] = 0
+  mask[mask > 0.6] = 255
+  mask[mask <= 0.6] = 0
+  mask = mask.cpu().numpy()
+  pred = pred.cpu().numpy()
+  for k in range(batch_size):
+    p, m = pred[k, ...], mask[k, ...]
+    fig = plt.figure(figsize=(8, 4))
+    ax = fig.subplots(nrows=1, ncols=2)
+    ax[0].imshow(p, cmap='gray')
+    ax[1].imshow(m, cmap='gray')
+    fig.savefig(os.path.join(OUTPUT_DIR, f"val_set_{k+1}.png"))
+    plt.close(fig=fig)
