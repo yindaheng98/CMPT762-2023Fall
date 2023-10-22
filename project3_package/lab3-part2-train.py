@@ -256,7 +256,7 @@ from hubconf import farseg_resnet50 as MyModel
 '''
 
 # Set the hyperparameters
-num_epochs = 10
+num_epochs = 200
 batch_size = 32
 momentum = 0.9
 learning_rate = 0.1
@@ -267,8 +267,10 @@ model = model.cuda() # move the model to GPU
 loader, _ = get_plane_dataset('train', batch_size) # initialize data_loader
 crit = nn.BCEWithLogitsLoss() # Define the loss function
 optim = torch.optim.SGD(model.parameters(), momentum=momentum, lr=learning_rate, weight_decay=weight_decay) # Initialize the optimizer as SGD
-from torch.optim.lr_scheduler import CosineAnnealingLR
-scheduler = CosineAnnealingLR(optim, T_max=num_epochs*len(loader), eta_min=1e-6) #learning rate decay
+from torch.optim.lr_scheduler import MultiStepLR
+# scheduler = CosineAnnealingLR(optim, T_max=num_epochs*len(loader), eta_min=1e-6) #learning rate decay
+max_iters = num_epochs*len(loader)
+scheduler = MultiStepLR(optim, milestones=[int(max_iters*0.3),int(max_iters*0.6),int(max_iters*0.8)], gamma=0.2) #learning rate decay
 # start the training procedure
 for epoch in range(num_epochs):
   total_loss = 0
@@ -280,6 +282,7 @@ for epoch in range(num_epochs):
     loss = crit(pred_mask, mask)
     optim.zero_grad()
     loss.backward()
+    nn.utils.clip_grad_norm_(model.parameters(), max_norm=35, norm_type=2)
     optim.step()
     total_loss += loss.cpu().data
     scheduler.step()

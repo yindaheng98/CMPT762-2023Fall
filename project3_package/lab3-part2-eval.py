@@ -240,7 +240,7 @@ class PlaneDataset(Dataset):
 def get_plane_dataset(set_name='train', batch_size=2):
     my_data_list = DatasetCatalog.get("data_detection_{}".format(set_name))
     dataset = PlaneDataset(set_name, my_data_list)
-    loader = DataLoader(dataset, batch_size=batch_size, num_workers=16, pin_memory=True, shuffle=False)
+    loader = DataLoader(dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=False)
     return loader, dataset
 
 """### Network"""
@@ -256,7 +256,7 @@ from hubconf import farseg_resnet50 as MyModel
 '''
 batch_size = 64
 model = MyModel().cuda()
-model.load_state_dict(torch.load('{}/output/final_segmentation_model.pth'.format(BASE_DIR)))
+model.load_state_dict(torch.load('{}/output/999_segmentation_model.pth'.format(BASE_DIR)))
 model = model.eval() # chaning the model to evaluation mode will fix the bachnorm layers
 loader, dataset = get_plane_dataset('val', batch_size)
 
