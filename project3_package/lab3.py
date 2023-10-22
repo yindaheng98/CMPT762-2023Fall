@@ -165,12 +165,20 @@ cv2.imwrite(save_path, out.get_image()[:, :, ::-1])
 # TODO: approx 10 lines
 '''
 from detectron2.utils.visualizer import GenericMask
+cache_dir = os.path.join(BASE_DIR, "data", "cache")
+os.makedirs(cache_dir, exist_ok=True)
+big_cache = {}
 def get_instance_sample(data, idx, img=None):
     height, width = data['height'], data['width']
     bbox = data['annotations'][idx]['bbox']
     x1, y1 = int(bbox[0]), int(bbox[1])
     x2, y2 = x1 + int(bbox[2]), y1 + int(bbox[3])
-    obj_img = cv2.imread(data['file_name'])[y1:y2,x1:x2,:]
+    cache_path = os.path.join(cache_dir, os.path.basename(data['file_name']) + f"-{idx}.png")
+    if not os.path.isfile(cache_path):
+        if data['file_name'] not in big_cache:
+            big_cache = {data['file_name']: cv2.imread(data['file_name'])}
+        cv2.imwrite(cache_path, big_cache[data['file_name']][y1:y2,x1:x2,:])
+    obj_img = cv2.imread(cache_path)
     obj_mask = GenericMask(data['annotations'][idx]['segmentation'], height, width).mask[y1:y2,x1:x2]
     obj_img = cv2.resize(obj_img, (128, 128))
     obj_mask = cv2.resize(obj_mask, (128, 128))
