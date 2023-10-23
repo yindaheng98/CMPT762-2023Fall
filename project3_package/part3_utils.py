@@ -227,10 +227,8 @@ def plot_part3_result(num_of_images=72):
       for idx in range(1, num_of_bbox + 1):
         colored_pred[:, :, rgb][pred_mask == idx] = distinct_colors[idx - 1][rgb]
 
-    img = cv2.resize(img.cpu().numpy(), (0, 0), fx=0.5, fy=0.5)
-    pred_mask = cv2.resize(colored_pred.cpu().numpy(), (0, 0), fx=0.5, fy=0.5)
-
-    pred_mask = pred_mask.astype('int')
+    img = img.cpu().numpy()
+    pred_mask = pred_mask.cpu().numpy().astype('int')
 
     plt.cla()
     fig, ax = plt.subplots(1, 2)
