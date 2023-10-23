@@ -17,7 +17,7 @@ weight_decay = 0.0001
 
 model = MyModel() # initialize the model
 model = model.cuda() # move the model to GPU
-loader, _ = get_plane_dataset('train', batch_size) # initialize data_loader
+loader, _ = get_plane_dataset('train', batch_size, flip=True) # initialize data_loader
 crit = nn.BCEWithLogitsLoss() # Define the loss function
 optim = torch.optim.SGD(model.parameters(), momentum=momentum, lr=learning_rate, weight_decay=weight_decay) # Initialize the optimizer as SGD
 from torch.optim.lr_scheduler import MultiStepLR

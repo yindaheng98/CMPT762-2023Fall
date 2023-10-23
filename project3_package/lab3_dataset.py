@@ -95,8 +95,7 @@ def get_detection_data(set_name):
         data = json.load(f)
     validate_size = int(len(data)*VAL_RATE)
     train_annotations, validate_annotations = data[0:len(data)-validate_size], data[len(data)-validate_size:]
-    annotations = validate_annotations if set_name == "val" else train_annotations
-    annotations = data if set_name == "all" else train_annotations
+    annotations = validate_annotations if set_name == "val" else (data if set_name == "all" else train_annotations)
     # return validate_set or train_set, with annotations
     datadict = {}
     for annotation in annotations:

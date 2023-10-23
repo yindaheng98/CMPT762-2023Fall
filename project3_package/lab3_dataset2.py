@@ -58,11 +58,17 @@ def get_instance_sample(data, idx, img=None):
 '''
 
 class PlaneDataset(Dataset):
-    def __init__(self, set_name, data_list):
+    def __init__(self, set_name, data_list, flip=False):
         self.transforms = transforms.Compose([
             transforms.ToTensor(), # Converting the image to tensor and change the image format (Channels-Last => Channels-First)
             transforms.Normalize((123.675, 116.28, 103.53), (58.395, 57.12, 57.375)),
         ])
+        self.transforms_flip = transforms.Compose([])
+        if flip:
+            self.transforms_flip = transforms.Compose([
+                transforms.RandomHorizontalFlip(0.5),
+                transforms.RandomVerticalFlip(0.5),
+            ])
         self.set_name = set_name
         self.data = data_list
         self.instance_map = []
@@ -81,6 +87,9 @@ class PlaneDataset(Dataset):
         if self.transforms is not None:
             img = self.transforms(img)
         mask = torch.tensor(mask, dtype=torch.float)
+        both_images = torch.cat((img, mask.unsqueeze(0)), 0)
+        both_images = self.transforms_flip(both_images)
+        img, mask = both_images[0:3], both_images[3]
         return img, mask
 
     '''
@@ -100,10 +109,10 @@ class PlaneDataset(Dataset):
 
         return img, mask
 
-def get_plane_dataset(set_name='train', batch_size=2):
+def get_plane_dataset(set_name='train', batch_size=2, flip=False, shuffle=False):
     my_data_list = DatasetCatalog.get("data_detection_{}".format(set_name))
-    dataset = PlaneDataset(set_name, my_data_list)
-    loader = DataLoader(dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=False)
+    dataset = PlaneDataset(set_name, my_data_list, flip=flip)
+    loader = DataLoader(dataset, batch_size=batch_size, num_workers=8, pin_memory=True, shuffle=shuffle)
     return loader, dataset
 
 """### Network"""
