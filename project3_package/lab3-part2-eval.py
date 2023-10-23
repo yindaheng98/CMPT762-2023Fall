@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from lab3_dataset2 import *
-from part3_utils import generate_pred_csv, plot_part3_result
 """### Evaluation and Visualization"""
 
 '''
@@ -69,7 +68,3 @@ with torch.no_grad():
     ax[1].imshow(m, cmap='gray')
     fig.savefig(os.path.join(OUTPUT_DIR, f"val_set_{k+1}.png"))
     plt.close(fig=fig)
-    
-# generate_pred_csv()
-  
-# plot_part3_result(10, 'test')
