@@ -59,6 +59,8 @@ def get_prediction_mask(data, obj_detect_model, seg_model):
   pred_mask = np.zeros((height,width), np.uint8)
   
   num_of_bbox = len(obj_detect_result['instances'])
+  # print("Number of bbox: {}".format(num_of_bbox))
+  
   for idx in range(num_of_bbox):
     # Obtain the bbox from Instances
     x0, y0, x1, y1 = [int(x) for x in obj_detect_result['instances'][idx].pred_boxes.tensor.cpu().numpy()[0]]
@@ -86,18 +88,21 @@ def get_prediction_mask(data, obj_detect_model, seg_model):
       
       sig_pred[sig_pred > 0.5] = idx + 1
       sig_pred[sig_pred <= 0.5] = 0
+      
             
       sig_pred = np.transpose(sig_pred.cpu(), (1, 2, 0))
       sig_pred = np.reshape(sig_pred, (IMAGE_SIZE, IMAGE_SIZE))
     
     # Resize the colored_pred to original size, and update the pred_mask
-    sig_pred = cv2.resize(sig_pred.numpy(), (ori_w, ori_h))
+    sig_pred = cv2.resize(sig_pred.numpy(), (ori_w, ori_h), interpolation = cv2.INTER_NEAREST)
     pred_mask[y0:y1, x0:x1] = sig_pred
   
+  # print("After Number of plane: {}".format(len(np.unique(pred_mask)) - 1))
+  
   gt_mask = None
-  img = torch.tensor(img, device='cuda')
+  img = torch.tensor(img, device='cuda').int()
   # gt_mask = torch.tensor(gt_mask)
-  pred_mask = torch.tensor(pred_mask, device='cuda')
+  pred_mask = torch.tensor(pred_mask, device='cuda').int()
   
   return img, gt_mask, pred_mask # gt_mask could be all zero when the ground truth is not given.
 
