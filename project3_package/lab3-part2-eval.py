@@ -70,4 +70,6 @@ from part3_utils import generate_pred_csv, plot_part3_result
 #     fig.savefig(os.path.join(OUTPUT_DIR, f"val_set_{k+1}.png"))
 #     plt.close(fig=fig)
     
-plot_part3_result(10)
+# generate_pred_csv()
+  
+plot_part3_result(10, 'val')

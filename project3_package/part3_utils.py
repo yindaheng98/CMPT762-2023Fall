@@ -1,6 +1,7 @@
 from lab3_dataset2 import *
 
 from detectron2.structures.boxes import pairwise_point_box_distance
+from detectron2.structures.masks import polygons_to_bitmask
 import colorsys
 import matplotlib.pyplot as plt
 
@@ -206,15 +207,26 @@ def generate_pred_csv():
   pd.DataFrame(preddic).to_csv(pred_file, index=False)
   pred_file.close()
   
-def plot_part3_result(num_of_images=72):
+def plot_part3_result(num_of_images=None, data_set='test'):
   obj_detect_model, seg_model = load_detect_and_seg_model()
-  test_data = get_detection_data("test")
   os.makedirs('images/', exist_ok=True)
+  
+  if data_set == 'test':
+    data = DatasetCatalog.get("data_detection_test")
+  elif data_set == 'val':
+    data = DatasetCatalog.get("data_detection_val")
+  elif data_set == 'train':
+    data = DatasetCatalog.get("data_detection_train")
+  else:
+    raise SystemExit('Uknown data set')
+  
+  if num_of_images == None:
+    num_of_images = len(data)
 
   for i in range(num_of_images):
     print("{}/{}".format(i+1, num_of_images))
-    image_name = test_data[i]['file_name'].split('/')[-1]
-    img, gt_mask, pred_mask = get_prediction_mask(test_data[i],
+    image_name = data[i]['file_name'].split('/')[-1]
+    img, gt_mask, pred_mask = get_prediction_mask(data[i],
                                                   obj_detect_model,
                                                   seg_model)
 
@@ -231,9 +243,24 @@ def plot_part3_result(num_of_images=72):
     colored_pred = colored_pred.cpu().numpy().astype('int')
 
     plt.cla()
-    fig, ax = plt.subplots(1, 2)
-    ax[0].imshow(img, vmin=0, vmax=255)
-    ax[1].imshow(colored_pred, vmin=0, vmax=255)
+    if data_set == 'test':
+      fig, ax = plt.subplots(1, 2)
+      ax[0].imshow(img, vmin=0, vmax=255)
+      ax[1].imshow(colored_pred, vmin=0, vmax=255)
+    else:
+      fig, ax = plt.subplots(1, 3)
+      ax[0].imshow(img, vmin=0, vmax=255)
+      ax[1].imshow(colored_pred, vmin=0, vmax=255)
+      ground_truth_mask = get_binary_seg_from_detectron2(data[i])
+      ax[2].imshow(ground_truth_mask, cmap='gray', vmin=0, vmax=1)
 
     plt.tight_layout()
-    plt.savefig("images/part3_{}".format(image_name), dpi=300)
+    plt.savefig("images/part3_{}_{}".format(data_set, image_name), dpi=300)
+
+def get_binary_seg_from_detectron2(data):
+  output = np.zeros((data['height'], data['width'])).astype('int')
+  for anno in data['annotations']:
+    polygon_bitmap = polygons_to_bitmask(anno['segmentation'], data['height'], data['width']).astype('int')
+    output = np.bitwise_or(polygon_bitmap, output)
+  
+  return output
