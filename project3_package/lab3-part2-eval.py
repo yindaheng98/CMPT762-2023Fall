@@ -10,9 +10,9 @@ from part3_utils import generate_pred_csv, plot_part3_result
 '''
 batch_size = 64
 model = MyModel().cuda()
-model.load_state_dict(torch.load('{}/output/999_segmentation_model.pth'.format(BASE_DIR)))
+model.load_state_dict(torch.load('{}/output/199_segmentation_model.pth'.format(BASE_DIR)))
 model = model.eval() # chaning the model to evaluation mode will fix the bachnorm layers
-loader, dataset = get_plane_dataset('val', batch_size, flip=True)
+loader, dataset = get_plane_dataset('val', batch_size, flip=False)
 
 total_iou = 0
 images = 0
