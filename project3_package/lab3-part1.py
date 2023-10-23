@@ -27,6 +27,8 @@ import cv2
 import csv
 import os
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+
 # import some common pytorch utilities
 from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
@@ -163,7 +165,7 @@ os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 # training settings
 cfg.DATASETS.TRAIN = ("data_detection_train",)
 cfg.DATASETS.TEST = ()
-cfg.SOLVER.MAX_ITER = 500
+cfg.SOLVER.MAX_ITER = 1200
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512
 cfg.SOLVER.IMS_PER_BATCH = 2
 cfg.SOLVER.BASE_LR = 0.00025
