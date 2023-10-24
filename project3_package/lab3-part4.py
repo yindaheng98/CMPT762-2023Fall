@@ -54,15 +54,13 @@ for i in range(3):
     visualizer = Visualizer(img[:, :, ::-1], metadata=MetadataCatalog.get("data_detection_test"), scale=1.2, instance_mode=ColorMode.IMAGE_BW)
     result = visualizer.draw_instance_predictions(result["instances"].to("cpu"))
     img = result.get_image()[:, :, ::-1]
-    cv2.imwrite(os.path.join(cfg.OUTPUT_DIR, f"test_set_{idx}.jpg"), img)
+    cv2.imwrite(os.path.join(cfg.OUTPUT_DIR, f"test_set_{idx}.png"), img)
 
 '''
 # Use COCOEvaluator and build_detection_train_loader
 # You can save the output predictions using inference_on_dataset
 # TODO: approx 5 lines
 '''
-from detectron2.data.datasets import register_coco_instances
-register_coco_instances("instance_dataset_train", {}, "data/train.json", "data/train")
-evaluator = COCOEvaluator("instance_dataset_train", output_dir=cfg.OUTPUT_DIR)
-test_loader = build_detection_test_loader(cfg, "instance_dataset_train")
+evaluator = COCOEvaluator("data_detection_val", tasks=("segm",), output_dir=cfg.OUTPUT_DIR)
+test_loader = build_detection_test_loader(cfg, "data_detection_val")
 print(inference_on_dataset(predictor.model, test_loader, evaluator))
