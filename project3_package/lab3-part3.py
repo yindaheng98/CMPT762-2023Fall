@@ -169,7 +169,6 @@ def generate_pred_csv():
   '''
   my_data_list = DatasetCatalog.get("data_detection_{}".format('all'))
   for i in tqdm(range(len(my_data_list)), position=0, leave=True):
-    print("{}/{}".format(i + 1, len(my_data_list)))
     sample = my_data_list[i]
     sample['image_id'] = sample['file_name'].split("/")[-1][:-4]
     img, true_mask, pred_mask = get_prediction_mask(sample, obj_detect_model, seg_model)
@@ -191,7 +190,6 @@ def generate_pred_csv():
   '''
   my_data_list = DatasetCatalog.get("data_detection_{}".format('test'))
   for i in tqdm(range(len(my_data_list)), position=0, leave=True):
-    print("{}/{}".format(i + 1, len(my_data_list)))
     sample = my_data_list[i]
     sample['image_id'] = sample['file_name'].split("/")[-1][:-4]
     img, true_mask, pred_mask = get_prediction_mask(sample, obj_detect_model, seg_model)
@@ -228,8 +226,8 @@ def plot_part3_result(num_of_images=None, data_set='test'):
   if num_of_images == None:
     num_of_images = len(data)
 
-  for i in range(num_of_images):
-    print("{}/{}".format(i+1, num_of_images))
+  total_iou = 0
+  for i in tqdm(range(num_of_images)):
     image_name = data[i]['file_name'].split('/')[-1]
     img, gt_mask, pred_mask = get_prediction_mask(data[i],
                                                   obj_detect_model,
@@ -258,9 +256,19 @@ def plot_part3_result(num_of_images=None, data_set='test'):
       ax[1].imshow(colored_pred, vmin=0, vmax=255)
       ground_truth_mask = get_binary_seg_from_detectron2(data[i])
       ax[2].imshow(ground_truth_mask, cmap='gray', vmin=0, vmax=1)
+      sum_mask = np.sum(colored_pred, axis=2)
+      sum_mask[sum_mask!=0] = 1
+      pred = torch.sum(torch.tensor(colored_pred), axis=2)!=0
+      mask = torch.tensor(ground_truth_mask) > 0.5
+      intersection = (pred & mask).float().sum((0, 1))  # Will be zero if Truth=0 or Prediction=0
+      union = (pred | mask).float().sum((0, 1))         # Will be zzero if both are 0
+      SMOOTH = 1e-6
+      iou = (intersection + SMOOTH) / (union + SMOOTH)  # We smooth our devision to avoid 0/0\
+      total_iou += iou
 
     plt.tight_layout()
     plt.savefig("images/part3_{}_{}".format(data_set, image_name), dpi=300)
+  print("\n #images: {}, Mean IoU: {}".format(num_of_images, total_iou/num_of_images))
 
 def get_binary_seg_from_detectron2(data):
   output = np.zeros((data['height'], data['width'])).astype('int')
@@ -272,6 +280,6 @@ def get_binary_seg_from_detectron2(data):
 
 if __name__ == "__main__":
 
-    generate_pred_csv()
+    # generate_pred_csv()
   
-    plot_part3_result(10, 'val')
+    plot_part3_result(None, 'val')

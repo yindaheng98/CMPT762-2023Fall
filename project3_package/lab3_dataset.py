@@ -17,7 +17,7 @@ This is a template notebook for Assignment 3.
 # from google.colab.patches import cv2_imshow
 from sklearn.metrics import jaccard_score
 from PIL import Image, ImageDraw
-from tqdm.notebook import tqdm
+from tqdm import tqdm
 import pandas as pd
 import numpy as np
 import datetime
