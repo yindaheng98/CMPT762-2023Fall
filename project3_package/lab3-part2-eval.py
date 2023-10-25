@@ -9,7 +9,7 @@ from lab3_dataset2 import *
 '''
 batch_size = 64
 model = MyModel().cuda()
-model.load_state_dict(torch.load('{}/output/199_segmentation_model.pth'.format(BASE_DIR)))
+model.load_state_dict(torch.load('{}/output/999_segmentation_model.pth'.format(BASE_DIR)))
 model = model.eval() # chaning the model to evaluation mode will fix the bachnorm layers
 loader, dataset = get_plane_dataset('val', batch_size, flip=False)
 
@@ -30,8 +30,8 @@ for (img, mask) in tqdm(loader):
     
     iou = (intersection + SMOOTH) / (union + SMOOTH)  # We smooth our devision to avoid 0/0
     
-    thresholded = torch.clamp(20 * (iou - 0.5), 0, 10).ceil() / 10  # This is equal to comparing with thresolds
-    
+    # thresholded = torch.clamp(20 * (iou - 0.5), 0, 10).ceil() / 10  # This is equal to comparing with thresolds
+    thresholded = iou
     total_iou += sum(thresholded.tolist())
     images += len(thresholded.tolist())
 
