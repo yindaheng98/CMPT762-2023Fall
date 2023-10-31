@@ -108,7 +108,7 @@ def get_prediction_mask(data, obj_detect_model, seg_model):
   # gt_mask = torch.tensor(gt_mask)
   pred_mask = torch.tensor(pred_mask, device='cuda').int()
   
-  return img, gt_mask, pred_mask # gt_mask could be all zero when the ground truth is not given.
+  return img, gt_mask, obj_detect_result, pred_mask # gt_mask could be all zero when the ground truth is not given.
 
 def rle_encoding(x):
   '''
@@ -175,7 +175,7 @@ def generate_pred_csv():
   for i in tqdm(range(len(my_data_list)), position=0, leave=True):
     sample = my_data_list[i]
     sample['image_id'] = sample['file_name'].split("/")[-1][:-4]
-    img, true_mask, pred_mask = get_prediction_mask(sample, obj_detect_model, seg_model)
+    _, _, _, pred_mask = get_prediction_mask(sample, obj_detect_model, seg_model)
     inds = torch.unique(pred_mask)
     if(len(inds)==1):
       preddic['ImageId'].append(sample['image_id'])
@@ -196,7 +196,7 @@ def generate_pred_csv():
   for i in tqdm(range(len(my_data_list)), position=0, leave=True):
     sample = my_data_list[i]
     sample['image_id'] = sample['file_name'].split("/")[-1][:-4]
-    img, true_mask, pred_mask = get_prediction_mask(sample, obj_detect_model, seg_model)
+    _, _, _, pred_mask = get_prediction_mask(sample, obj_detect_model, seg_model)
     inds = torch.unique(pred_mask)
     if(len(inds)==1):
       preddic['ImageId'].append(sample['image_id'])
@@ -233,7 +233,7 @@ def plot_part3_result(num_of_images=None, data_set='test'):
   total_iou = 0
   for i in tqdm(range(num_of_images)):
     image_name = data[i]['file_name'].split('/')[-1]
-    img, gt_mask, pred_mask = get_prediction_mask(data[i],
+    img, gt_mask, bbox_result, pred_mask = get_prediction_mask(data[i],
                                                   obj_detect_model,
                                                   seg_model)
 
@@ -251,15 +251,23 @@ def plot_part3_result(num_of_images=None, data_set='test'):
 
     plt.cla()
     if data_set == 'test':
-      fig, ax = plt.subplots(1, 2)
-      ax[0].imshow(img, vmin=0, vmax=255)
-      ax[1].imshow(colored_pred, vmin=0, vmax=255)
-    else:
       fig, ax = plt.subplots(1, 3)
       ax[0].imshow(img, vmin=0, vmax=255)
       ax[1].imshow(colored_pred, vmin=0, vmax=255)
+      visualizer = Visualizer(img[:, :, ::-1], metadata=MetadataCatalog.get("data_detection_train"), scale=1)
+      bbox_visual = visualizer.draw_instance_predictions(bbox_result["instances"].to("cpu"))
+      ax[2].imshow(bbox_visual.get_image()[:, :, ::-1])
+      
+    else:
+      fig, ax = plt.subplots(1, 4)
+      ax[0].imshow(img, vmin=0, vmax=255)
+      ax[1].imshow(colored_pred, vmin=0, vmax=255)
+      visualizer = Visualizer(img[:, :, ::-1], metadata=MetadataCatalog.get("data_detection_train"), scale=1)
+      bbox_visual = visualizer.draw_instance_predictions(bbox_result["instances"].to("cpu"))
+      ax[2].imshow(bbox_visual.get_image()[:, :, ::-1])
+      
       ground_truth_mask = get_binary_seg_from_detectron2(data[i])
-      ax[2].imshow(ground_truth_mask, cmap='gray', vmin=0, vmax=1)
+      ax[3].imshow(ground_truth_mask, cmap='gray', vmin=0, vmax=1)
       sum_mask = np.sum(colored_pred, axis=2)
       sum_mask[sum_mask!=0] = 1
       pred = torch.sum(torch.tensor(colored_pred), axis=2)!=0
@@ -271,7 +279,7 @@ def plot_part3_result(num_of_images=None, data_set='test'):
       total_iou += iou
 
     plt.tight_layout()
-    plt.savefig("images/part3_{}_{}".format(data_set, image_name), dpi=300)
+    plt.savefig("images/part3_{}_{}".format(data_set, image_name), dpi=600)
   print("\n #images: {}, Mean IoU: {}".format(num_of_images, total_iou/num_of_images))
 
 def get_binary_seg_from_detectron2(data):
@@ -286,4 +294,4 @@ if __name__ == "__main__":
 
   # generate_pred_csv()
 
-  plot_part3_result(None, 'val')
+  plot_part3_result(10, 'val')
