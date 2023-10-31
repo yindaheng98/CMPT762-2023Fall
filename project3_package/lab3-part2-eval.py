@@ -7,9 +7,9 @@ from lab3_dataset2 import *
 # You may load the trained model again, in case if you want to continue your code later
 # TODO: approx 15 lines
 '''
-batch_size = 64
+batch_size = 32
 model = MyModel().cuda()
-model.load_state_dict(torch.load('{}/output/999_segmentation_model.pth'.format(BASE_DIR)))
+model.load_state_dict(torch.load('{}/output/999_segmentation_model_with_random_flip.pth'.format(BASE_DIR)))
 model = model.eval() # chaning the model to evaluation mode will fix the bachnorm layers
 loader, dataset = get_plane_dataset('val', batch_size, flip=False)
 

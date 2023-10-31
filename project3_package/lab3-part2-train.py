@@ -9,15 +9,16 @@ from lab3_dataset2 import *
 '''
 
 # Set the hyperparameters
-num_epochs = 200
+num_epochs = 1000
 batch_size = 32
 momentum = 0.9
 learning_rate = 0.1
 weight_decay = 0.0001
 
 model = MyModel() # initialize the model
+model.load_state_dict(torch.load('{}/output/999_segmentation_model.pth'.format(BASE_DIR)))
 model = model.cuda() # move the model to GPU
-loader, _ = get_plane_dataset('train', batch_size, flip=True) # initialize data_loader
+loader, _ = get_plane_dataset('train', batch_size, flip=True, shuffle=True) # initialize data_loader
 crit = nn.BCEWithLogitsLoss() # Define the loss function
 optim = torch.optim.SGD(model.parameters(), momentum=momentum, lr=learning_rate, weight_decay=weight_decay) # Initialize the optimizer as SGD
 from torch.optim.lr_scheduler import MultiStepLR
