@@ -21,7 +21,9 @@ def split_image_to_Patch(img, height, width):
             if j + size > height:
                 j = height - size
             
-            cropped_img = img.crop((i, j, i + size, j + size))
+            # cropped_img = img.crop((i, j, i + size, j + size))
+            
+            cropped_img = img[j: j + size, i: i + size] 
             cropped_images.append(cropped_img)
 
             position = [i,j]

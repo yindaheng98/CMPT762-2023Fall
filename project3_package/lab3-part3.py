@@ -5,6 +5,8 @@ from detectron2.structures.masks import polygons_to_bitmask
 import colorsys
 import matplotlib.pyplot as plt
 
+from Image_Predict import get_predict as detect_model_with_image_split
+
 IMAGE_SIZE = 128
 
 def remove_overlapped_bbox(instances, score_threshold=0.8):
@@ -52,7 +54,9 @@ def get_prediction_mask(data, obj_detect_model, seg_model):
   img = cv2.imread(data['file_name'])
   height, width = img.shape[:2]
   
-  obj_detect_result = obj_detect_model(img)
+  # obj_detect_result = obj_detect_model(img)
+  # img_PIL = Image.fromarray(np.uint8(img)).convert('RGB')
+  obj_detect_result = detect_model_with_image_split(obj_detect_model, img, height, width)
   
   # obj_detect_result = remove_overlapped_bbox(obj_detect_result)
   
@@ -148,14 +152,14 @@ def load_detect_and_seg_model():
   cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512  # Number of regions per image for training
   cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml")
 
-  cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
+  cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final_detection.pth")
   # cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml") # pretrain model
   cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6
   obj_detect_model = DefaultPredictor(cfg)
 
   # Load segmentation model 
   seg_model = MyModel().cuda()
-  seg_model.load_state_dict(torch.load('{}/output/999_segmentation_model.pth'.format(BASE_DIR)))
+  seg_model.load_state_dict(torch.load('{}/output/999_segmentation_model_with_random_flip.pth'.format(BASE_DIR)))
   seg_model = seg_model.eval() # chaning the model to evaluation mode will fix the bachnorm layers
   
   return obj_detect_model, seg_model
@@ -280,6 +284,6 @@ def get_binary_seg_from_detectron2(data):
 
 if __name__ == "__main__":
 
-    # generate_pred_csv()
-  
-    plot_part3_result(None, 'val')
+  # generate_pred_csv()
+
+  plot_part3_result(None, 'val')
