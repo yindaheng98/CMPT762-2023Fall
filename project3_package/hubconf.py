@@ -1,5 +1,4 @@
 import torch.nn as nn
-import fpn
 
 try:
     from torch.hub import load_state_dict_from_url
@@ -8,7 +7,7 @@ except ImportError:
 
 dependencies = ['torch']
 
-from farseg import FarSeg
+from farseg import FarSeg, default_conv_block
 
 model_urls = {
     'farseg_resnet50_isaid': 'https://github.com/Z-Zheng/FarSeg/releases/download/v1.0/farseg50.pth',
@@ -33,7 +32,7 @@ def farseg_resnet50(pretrained=True, progress=True):
             fpn=dict(
                 in_channels_list=(256, 512, 1024, 2048),
                 out_channels=256,
-                conv_block=fpn.default_conv_block,
+                conv_block=default_conv_block,
                 top_blocks=None,
             ),
             scene_relation=dict(
