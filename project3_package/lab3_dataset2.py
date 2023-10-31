@@ -117,4 +117,4 @@ def get_plane_dataset(set_name='train', batch_size=2, flip=False, shuffle=False)
 
 """### Network"""
 
-from hubconf import farseg_resnet50 as MyModel
+from farseg import farseg_resnet50 as MyModel
