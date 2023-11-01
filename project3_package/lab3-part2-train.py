@@ -16,7 +16,7 @@ learning_rate = 0.1
 weight_decay = 0.0001
 
 model = MyModel() # initialize the model
-model.load_state_dict(torch.load('{}/output/999_segmentation_model.pth'.format(BASE_DIR)))
+model.load_state_dict(torch.load('{}/output/399_segmentation_model_train_by_split.pth'.format(BASE_DIR)))
 model = model.cuda() # move the model to GPU
 loader, _ = get_plane_dataset('train', batch_size, flip=True, shuffle=True) # initialize data_loader
 crit = nn.BCEWithLogitsLoss() # Define the loss function

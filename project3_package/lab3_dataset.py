@@ -73,7 +73,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # TODO: approx 35 lines
 '''
 VAL_RATE = 0.2 # Precentage of the validate size
-def get_detection_data(set_name):
+def get_detection_data(set_name, datapath="dataset_converted_part1_no_exclude_small_area.json"):
     data_dirs = '{}/data'.format(BASE_DIR)
     # return test_set, no annotations
     if set_name == "test":
@@ -91,7 +91,7 @@ def get_detection_data(set_name):
                 })
         return test_set
     # return validate_set or train_set, with annotations
-    with open("dataset_converted_part1_no_exclude_small_area.json") as f:
+    with open(datapath) as f:
         data = json.load(f)
     validate_size = int(len(data)*VAL_RATE)
     train_annotations, validate_annotations = data[0:len(data)-validate_size], data[len(data)-validate_size:]
@@ -136,3 +136,6 @@ def get_detection_data(set_name):
 for i in ["train", "val", "all", "test"]:
     DatasetCatalog.register("data_detection_{}".format(i), lambda i=i: get_detection_data(i))
     MetadataCatalog.get("data_detection_{}".format(i)).set(thing_classes=["not plane 1", "not plane 2", "not plane 3", "not plane 4", "plane"])
+
+DatasetCatalog.register("data_detection_all_ori", lambda i=i: get_detection_data("all", datapath="data/train.json"))
+MetadataCatalog.get("data_detection_all_ori").set(thing_classes=["not plane 1", "not plane 2", "not plane 3", "not plane 4", "plane"])

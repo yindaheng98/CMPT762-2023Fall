@@ -159,7 +159,7 @@ def load_detect_and_seg_model():
 
   # Load segmentation model 
   seg_model = MyModel().cuda()
-  seg_model.load_state_dict(torch.load('{}/output/999_segmentation_model_with_random_flip.pth'.format(BASE_DIR)))
+  seg_model.load_state_dict(torch.load('{}/output/final_segmentation_model.pth'.format(BASE_DIR)))
   seg_model = seg_model.eval() # chaning the model to evaluation mode will fix the bachnorm layers
   
   return obj_detect_model, seg_model
@@ -171,7 +171,7 @@ def generate_pred_csv():
   '''
   # Writing the predictions of the all train set
   '''
-  my_data_list = DatasetCatalog.get("data_detection_{}".format('all'))
+  my_data_list = DatasetCatalog.get("data_detection_all_ori")
   for i in tqdm(range(len(my_data_list)), position=0, leave=True):
     sample = my_data_list[i]
     sample['image_id'] = sample['file_name'].split("/")[-1][:-4]
@@ -292,6 +292,6 @@ def get_binary_seg_from_detectron2(data):
 
 if __name__ == "__main__":
 
-  # generate_pred_csv()
+  generate_pred_csv()
 
   plot_part3_result(10, 'val')

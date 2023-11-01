@@ -49,5 +49,5 @@ for image_id, img_data in enumerate(data):
         }
         converted.append(converted_img)
 
-with open("dataset_converted_part1.json", "w", encoding="utf8") as f:
+with open("dataset_converted_part1_no_exclude_small_area.json", "w", encoding="utf8") as f:
     data = json.dump(converted, f, indent=2)
