@@ -60,11 +60,18 @@ with torch.no_grad():
   mask[mask <= 0.5] = 0
   mask = mask.cpu().numpy()
   pred = pred.cpu().numpy()
+  img = img.cpu().numpy()
   for k in range(batch_size):
-    p, m = pred[k, ...], mask[k, ...]
-    fig = plt.figure(figsize=(8, 4))
-    ax = fig.subplots(nrows=1, ncols=2)
+    p, m, i = pred[k, ...], mask[k, ...], img[k, ...]
+    fig = plt.figure(figsize=(12, 4))
+    ax = fig.subplots(nrows=1, ncols=3)
     ax[0].imshow(p, cmap='gray')
     ax[1].imshow(m, cmap='gray')
+    std = [58.395, 57.12, 57.375]
+    mean = [123.675, 116.28, 103.53]
+    for d in range(3):
+      i[d, ...] = i[d, ...] * std[d] + mean[d]
+    i = torch.tensor(i).permute((1,2,0)).numpy()
+    ax[2].imshow(i)
     fig.savefig(os.path.join(OUTPUT_DIR, f"val_set_{k+1}.png"))
     plt.close(fig=fig)
