@@ -46,7 +46,9 @@ def get_instance_sample(data, idx, img=None):
             queue.append(data['file_name'])
         cv2.imwrite(cache_path, big_cache[data['file_name']][y1:y2,x1:x2,:])
     obj_img = cv2.imread(cache_path)
-    obj_mask = GenericMask(data['annotations'][idx]['segmentation'], height, width).mask[y1:y2,x1:x2]
+    obj_mask = np.zeros((int(bbox[3]), int(bbox[2])))
+    if len(data['annotations'][idx]['segmentation']) > 0 and sum(len(a) for a in data['annotations'][idx]['segmentation']) > 0:
+        obj_mask = GenericMask(data['annotations'][idx]['segmentation'], height, width).mask[y1:y2,x1:x2]
     obj_img = cv2.resize(obj_img, (128, 128))
     obj_mask = cv2.resize(obj_mask, (128, 128))
     return obj_img, obj_mask
