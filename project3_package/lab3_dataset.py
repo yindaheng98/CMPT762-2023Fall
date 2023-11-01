@@ -91,7 +91,7 @@ def get_detection_data(set_name):
                 })
         return test_set
     # return validate_set or train_set, with annotations
-    with open(os.path.join(data_dirs, "train.json")) as f:
+    with open("dataset_converted_part1_no_exclude_small_area.json") as f:
         data = json.load(f)
     validate_size = int(len(data)*VAL_RATE)
     train_annotations, validate_annotations = data[0:len(data)-validate_size], data[len(data)-validate_size:]

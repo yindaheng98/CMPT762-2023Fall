@@ -28,7 +28,7 @@ cv2.imwrite(save_path, out.get_image()[:, :, ::-1])
 # TODO: approx 10 lines
 '''
 from detectron2.utils.visualizer import GenericMask
-cache_dir = os.path.join(BASE_DIR, "data", "cache")
+cache_dir = os.path.join(BASE_DIR, "data", "cache-new")
 os.makedirs(cache_dir, exist_ok=True)
 big_cache = {}
 queue = []
