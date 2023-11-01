@@ -12,7 +12,7 @@ with open("dataset_output_part1.json", "r") as f:
 
 converted = []
 i = 0
-for image_id, img_data in enumerate(data[0:3]):
+for image_id, img_data in enumerate(data):
     segmentation = [s for s in img_data["segmentation"] if len(s) > 0]
     if len(segmentation) <= 0:
         continue
