@@ -379,7 +379,7 @@ def split_segmentations(segmentations, boxes):
     return filtered_points
 
 
-def filter_all_segments(dataset):
+def filter_all_segments(dataset, dataset_bbox):
     segment_after_filter = []
     for idx, d in  enumerate(dataset):
         segment = split_segmentations(d["segmentation"], dataset_bbox[idx]["segmentation"])
@@ -402,7 +402,7 @@ def store_all_bbox(dataset_pred):
     return dataset_bbox
 
 
-def store_all_segments():
+def store_all_predict_segments(dataset_bbox):
     dataset = []
     with open(os.path.join(data_dirs, "train.json"), 'r') as f:
         data = json.load(f)
@@ -420,11 +420,11 @@ def store_all_segments():
             dataset.append(record)
         else:
             existing_record["segmentation"] = existing_record["segmentation"]+anno["segmentation"]
-    return filter_all_segments(dataset)
+    return filter_all_segments(dataset, dataset_bbox)
 
 def create_output_file(dataset_pred):
     dataset_bbox = store_all_bbox(dataset_pred)
-    dataset_segments = store_all_segments()
+    dataset_segments = store_all_predict_segments(dataset_bbox)
     final_output = []
 
     for i in range(len(dataset_bbox)):
