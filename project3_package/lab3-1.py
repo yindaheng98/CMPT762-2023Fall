@@ -80,7 +80,7 @@ def adjust_segmentation(segmentation, i, j):
     return adjusted_segmentation
 
 
-def split_image_and_annotations(img, annotations):
+def split_image_and_annotations(img, annotations, check):
     cropped_annotations = []
     width, height = img.size
     x, y, w, h = annotations["bbox"]
@@ -108,6 +108,17 @@ def split_image_and_annotations(img, annotations):
                 cropped_anno["width"] = i_add
                 cropped_anno["height"] = j_add
                 cropped_annotations.append(cropped_anno)
+            else:
+                if check == 1:
+                    cropped_anno = annotations.copy()
+                    cropped_anno["bbox"] = [0,0,0,0]
+                    cropped_anno["segmentation"] = [[]]
+                    cropped_anno["file_name"] = cropped_filename
+                    cropped_anno["position"] = [i,j]
+                    cropped_anno["width"] = i_add
+                    cropped_anno["height"] = j_add
+                    cropped_annotations.append(cropped_anno)
+
     return cropped_annotations
 
 
@@ -124,19 +135,18 @@ def get_detection_data(set_name):
 
     if set_name == "train":
         annotations = train_data
-    elif set_name == "all":
-        annotations = data
     elif set_name == "val":
         annotations = val_data
+    elif set_name == "all":
+        annotations = data
     elif set_name == "test":
         annotations = data
     else:
         raise ValueError("Unknown set_name: {}".format(set_name))
 
-
+    pre_name = ""
     for anno in annotations:
         filename = os.path.join(data_dirs, "train", anno["file_name"])
-        
         if set_name == "test":
             width, height = get_image_dimensions(filename)
             existing_record = next((record for record in dataset if record["file_name"] == filename), None)
@@ -163,7 +173,13 @@ def get_detection_data(set_name):
             record["annotations"].append(obj)
         else: 
             img = Image.open(filename)
-            cropped_anno = split_image_and_annotations(img, anno)
+
+            if anno["file_name"] == pre_name:
+                check = 0
+            else:
+                check = 1
+            pre_name = anno["file_name"]
+            cropped_anno = split_image_and_annotations(img, anno, check)
             
             for crop_anno in cropped_anno:
                 filename_crop = crop_anno["file_name"]
@@ -204,24 +220,24 @@ for d in ["train", "test", "val", "all"]:
     DatasetCatalog.register("plane_" + d, lambda d=d: get_detection_data(d))
     MetadataCatalog.get("plane_" + d).set(thing_classes=["class1","class2","class3","class4","plane"])
 
-plane_metadata = MetadataCatalog.get("plane_train")
-
-# Load some samples from the training dataset
-samples = get_detection_data("train")
+plane_metadata = MetadataCatalog.get("plane_all")
 
 
 '''
 # Visualize some samples using Visualizer to make sure that the function works correctly
 # TODO: approx 5 lines
 '''
-for idx, d in enumerate(random.sample(samples, 3)):
-    img = cv2.imread(d["file_name"])
-    # print(d["file_name"])
-    visualizer = Visualizer(img[:, :, ::-1], metadata=plane_metadata, scale=0.5)
-    out = visualizer.draw_dataset_dict(d)
-    save_path = IMAGE_DIR+f"/Q1_GT_{idx}.jpg"
-    cv2.imwrite(save_path, out.get_image()[:, :, ::-1])
-    print(f"Image saved to {save_path}")
+# Load some samples from the training dataset
+# samples = get_detection_data("all")
+
+# for idx, d in enumerate(random.sample(samples, 3)):
+#     img = cv2.imread(d["file_name"])
+#     # print(d["file_name"])
+#     visualizer = Visualizer(img[:, :, ::-1], metadata=plane_metadata, scale=0.5)
+#     out = visualizer.draw_dataset_dict(d)
+#     save_path = IMAGE_DIR+f"/Q1_GT_{idx}.jpg"
+#     cv2.imwrite(save_path, out.get_image()[:, :, ::-1])
+#     print(f"Image saved to {save_path}")
 
 
 '''
@@ -233,7 +249,7 @@ cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_101_
 
 cfg.OUTPUT_DIR = "{}/output/".format(BASE_DIR)
 
-cfg.DATASETS.TRAIN = ("plane_train",)
+cfg.DATASETS.TRAIN = ("plane_all",)
 cfg.DATASETS.TEST = ()
 
 cfg.SOLVER.MAX_ITER = 500             # Number of training iterations
@@ -249,10 +265,10 @@ cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_1
 # Create a DefaultTrainer using the above config and train the model
 # TODO: approx 5 lines
 '''
-os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-trainer = DefaultTrainer(cfg)
-trainer.resume_or_load(resume=False)
-trainer.train()
+# os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+# trainer = DefaultTrainer(cfg)
+# trainer.resume_or_load(resume=False)
+# trainer.train()
 
 
 '''
@@ -271,12 +287,11 @@ predictor = DefaultPredictor(cfg)
 def filter_overlap_bbox(dataset_pred):
     dataset_pred = dataset_pred
     for idx, d in enumerate(dataset_pred): 
-        img = cv2.imread(d["file_name"])
-
         boxes = d["instances"][0]["instances"].pred_boxes.tensor
         scores = d["instances"][0]["instances"].scores
         keep = nms(boxes, scores, iou_threshold=0.2)
         d["instances"][0]["instances"] = d["instances"][0]["instances"][keep]
+        img = cv2.imread(d["file_name"])
         v = Visualizer(img[:, :, ::-1],
                     #metadata=plane_metadata, 
                     scale=1, 
@@ -290,16 +305,20 @@ def filter_overlap_bbox(dataset_pred):
         print(f"Image saved to {save_path}")
     return dataset_pred
 
+from multiprocessing.pool import ThreadPool
+
+def load_image(file_name):
+    return cv2.imread(file_name)
+
 
 def predict_and_adjust_bbox(dataset_dicts):
     all_predictions = []
     for idx, d in enumerate(dataset_dicts):
         im = cv2.imread(d["file_name"])
-        print(d["file_name"])
         outputs = predictor(im)
         file_number = d["file_name"][-9:-4]
         scores = outputs["instances"].scores
-        keep = scores>0.9
+        keep = scores>0.6
         outputs["instances"] = outputs["instances"][keep]
 
         dx, dy = d["position"]
@@ -375,7 +394,6 @@ def split_segmentations(segmentations, boxes):
                     record.append(segmentations[j][i])
                     record.append(segmentations[j][i+1])
             filtered_points.append(record)
-    print(len(filtered_points))
     return filtered_points
 
 
@@ -388,6 +406,7 @@ def filter_all_segments(dataset, dataset_bbox):
                     "segmentation": segment
                 }
         segment_after_filter.append(record)
+    return segment_after_filter
 
 
 def store_all_bbox(dataset_pred):
@@ -409,7 +428,6 @@ def store_all_predict_segments(dataset_bbox):
 
     for idx, anno in  enumerate(data):
         filename = os.path.join(data_dirs, "train", anno["file_name"])
-        #segment = split_segmentations(anno["segmentation"], dataset_pred[idx]["instances"][0]["instances"].pred_boxes.tensor)
         existing_record = next((record for record in dataset if record["file_name"] == filename), None)
 
         if existing_record is None:
@@ -428,17 +446,12 @@ def create_output_file(dataset_pred):
     final_output = []
 
     for i in range(len(dataset_bbox)):
-        print(len(dataset_segments[i]["segmentation"]))
         record = {
                     "file_name": dataset_bbox[i]["file_name"],
                     "segmentation": dataset_segments[i]["segmentation"],
                     "bbox": dataset_bbox[i]["segmentation"]
                 }
         final_output.append(record)
-    
-    print(len(dataset_bbox))
-    print(len(dataset_segments))
-    print(len(final_output))
     return final_output
 
 final_output = create_output_file(dataset_pred)
