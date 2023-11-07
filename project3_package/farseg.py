@@ -808,3 +808,11 @@ def farseg_resnet50(pretrained=True, progress=True):
         return model
     else:
         return model
+
+if __name__ == "__main__":
+    import torch.onnx
+    from tensorboardX import SummaryWriter
+    model = farseg_resnet50(pretrained=False)
+    writer = SummaryWriter(log_dir='./output')
+    writer.add_graph(model, torch.zeros((1,3,128,128)))
+    torch.onnx.export(farseg_resnet50(pretrained=False), torch.zeros((1,3,128,128)), "farseg_resnet50.onnx")
