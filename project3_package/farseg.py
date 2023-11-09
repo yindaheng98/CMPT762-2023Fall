@@ -722,7 +722,7 @@ class FarSeg(CVModule):
         cls_pred = self.cls_pred_conv(final_feat)
         cls_pred = self.upsample4x_op(cls_pred)
 
-        return cls_pred.softmax(dim=1)
+        return cls_pred.softmax(dim=1)[:, 0, :, :].squeeze(1)
 
     def set_defalut_config(self):
         self.config.update(dict(

@@ -21,7 +21,6 @@ for (img, mask) in tqdm(loader):
     img = img.cuda()
     mask = mask.cuda()
     pred = model(img)
-    pred = pred[:, 0, :, :].squeeze(1)  # BATCH x 1 x H x W => BATCH x H x W
     pred = pred > 0.5
     mask = mask > 0.5
     
@@ -53,7 +52,6 @@ with torch.no_grad():
   img = img.cuda()
   mask = mask.cuda()
   pred = model(img)
-  pred = pred[:, 0, :, :].squeeze(1)  # BATCH x 1 x H x W => BATCH x H x W
   pred[pred > 0.5] = 255
   pred[pred <= 0.5] = 0
   mask[mask > 0.5] = 255
