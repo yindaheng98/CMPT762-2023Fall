@@ -179,9 +179,9 @@ cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_1
 # Create a DefaultTrainer using the above config and train the model
 # TODO: approx 5 lines
 '''
-# trainer = DefaultTrainer(cfg)
-# trainer.resume_or_load(resume=False)
-# trainer.train()
+trainer = DefaultTrainer(cfg)
+trainer.resume_or_load(resume=False)
+trainer.train()
 
 """### Evaluation and Visualization"""
 
@@ -189,8 +189,8 @@ cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_1
 # After training the model, you need to update cfg.MODEL.WEIGHTS
 # Define a DefaultPredictor
 '''
-# cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
-cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml") # pretrain model
+cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
+# cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml") # pretrain model
 cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6
 predictor = DefaultPredictor(cfg)
 
