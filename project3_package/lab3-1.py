@@ -20,6 +20,7 @@ from torch.autograd import Variable
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
+import shutil
 
 # import some common detectron2 utilities
 import detectron2
@@ -36,6 +37,7 @@ from detectron2.utils.visualizer import Visualizer
 from detectron2.data import build_detection_test_loader
 from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2.evaluation import COCOEvaluator, inference_on_dataset
+from detectron2.utils.visualizer import GenericMask
 setup_logger()
 
 '''
@@ -47,7 +49,13 @@ setup_logger()
 '''
 BASE_DIR = './'
 
+CACHE_PATH = "./data/cache-new" 
+if os.path.exists(CACHE_PATH):
+    shutil.rmtree(CACHE_PATH)
+    
 COCO_EVALUATOR_OUTPUT = "{}/COCO_output".format(BASE_DIR)
+if os.path.exists(COCO_EVALUATOR_OUTPUT):
+    shutil.rmtree(COCO_EVALUATOR_OUTPUT)
 os.makedirs(COCO_EVALUATOR_OUTPUT, exist_ok=True)
 
 IMAGE_DIR = "{}/images_output".format(BASE_DIR)
@@ -108,16 +116,16 @@ def split_image_and_annotations(img, annotations, check):
                 cropped_anno["width"] = i_add
                 cropped_anno["height"] = j_add
                 cropped_annotations.append(cropped_anno)
-            else:
-                if check == 1:
-                    cropped_anno = annotations.copy()
-                    cropped_anno["bbox"] = [0,0,0,0]
-                    cropped_anno["segmentation"] = [[]]
-                    cropped_anno["file_name"] = cropped_filename
-                    cropped_anno["position"] = [i,j]
-                    cropped_anno["width"] = i_add
-                    cropped_anno["height"] = j_add
-                    cropped_annotations.append(cropped_anno)
+            # else:
+            #     if check == 1:
+            #         cropped_anno = annotations.copy()
+            #         cropped_anno["bbox"] = [0,0,0,0]
+            #         cropped_anno["segmentation"] = [[]]
+            #         cropped_anno["file_name"] = cropped_filename
+            #         cropped_anno["position"] = [i,j]
+            #         cropped_anno["width"] = i_add
+            #         cropped_anno["height"] = j_add
+            #         cropped_annotations.append(cropped_anno)
 
     return cropped_annotations
 
@@ -228,16 +236,16 @@ plane_metadata = MetadataCatalog.get("plane_all")
 # TODO: approx 5 lines
 '''
 # Load some samples from the training dataset
-# samples = get_detection_data("all")
+samples = get_detection_data("all")
 
-# for idx, d in enumerate(random.sample(samples, 3)):
-#     img = cv2.imread(d["file_name"])
-#     # print(d["file_name"])
-#     visualizer = Visualizer(img[:, :, ::-1], metadata=plane_metadata, scale=0.5)
-#     out = visualizer.draw_dataset_dict(d)
-#     save_path = IMAGE_DIR+f"/Q1_GT_{idx}.jpg"
-#     cv2.imwrite(save_path, out.get_image()[:, :, ::-1])
-#     print(f"Image saved to {save_path}")
+for idx, d in enumerate(random.sample(samples, 1)):
+    img = cv2.imread(d["file_name"])
+    # print(d["file_name"])
+    visualizer = Visualizer(img[:, :, ::-1], metadata=plane_metadata, scale=0.5)
+    out = visualizer.draw_dataset_dict(d)
+    save_path = IMAGE_DIR+f"/Q1_GT_{idx}.jpg"
+    cv2.imwrite(save_path, out.get_image()[:, :, ::-1])
+    print(f"Image saved to {save_path}")
 
 
 '''
@@ -253,22 +261,21 @@ cfg.DATASETS.TRAIN = ("plane_all",)
 cfg.DATASETS.TEST = ()
 
 cfg.SOLVER.MAX_ITER = 500             # Number of training iterations
-cfg.SOLVER.BASE_LR = 0.00025          # Learning rate
+cfg.SOLVER.BASE_LR = 0.0001          # Learning rate
 cfg.SOLVER.IMS_PER_BATCH = 2          # Number of images per batch
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512  # Number of regions per image for training
 
-# 4. Pretrain Model (Improve from 25% to 47%)
-cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml")
-
+os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
+# 4. Pretrain Model
+cfg.MODEL.WEIGHTS = "{}/500_detection_model.pth".format(cfg.OUTPUT_DIR)
 
 '''
 # Create a DefaultTrainer using the above config and train the model
 # TODO: approx 5 lines
 '''
-# os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
-# trainer = DefaultTrainer(cfg)
-# trainer.resume_or_load(resume=False)
-# trainer.train()
+trainer = DefaultTrainer(cfg)
+trainer.resume_or_load(resume=False)
+trainer.train()
 
 
 '''
@@ -284,18 +291,64 @@ predictor = DefaultPredictor(cfg)
 # Visualize the output for 3 random test samples
 # TODO: approx 10 lines
 '''
-def filter_overlap_bbox(dataset_pred):
+
+def calculate_iou(box1, box2):
+    x1 = max(box1[0], box2[0])
+    y1 = max(box1[1], box2[1])
+    x2 = min(box1[2], box2[2])
+    y2 = min(box1[3], box2[3])
+
+    intersection_area = max(0, x2 - x1) * max(0, y2 - y1)
+
+    box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
+    box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
+
+    iou_box1 = intersection_area / box1_area
+    iou_box2 = intersection_area / box2_area
+
+    return iou_box1, iou_box2
+
+
+def filter_overlap_bbox(dataset_pred, iou_threshold=0.7, overlap_ratio=0.7, size_ratio=0.01):
     dataset_pred = dataset_pred
     for idx, d in enumerate(dataset_pred): 
         boxes = d["instances"][0]["instances"].pred_boxes.tensor
         scores = d["instances"][0]["instances"].scores
-        keep = nms(boxes, scores, iou_threshold=0.2)
+
+
+        areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+        average_area = areas.mean()
+
+        keep_size = areas >= (average_area * size_ratio)
+        boxes = boxes[keep_size]
+        scores = scores[keep_size]
+
+        keep = nms(boxes, scores, iou_threshold=iou_threshold)
+        boxes = boxes[keep]
+        scores = scores[keep]
+
+        keep_mask = torch.ones(boxes.size(0), dtype=torch.bool)
+
+        for i in range(boxes.size(0)):
+            if not keep_mask[i]:
+                continue
+            for j in range(boxes.size(0)):
+                if i != j and keep_mask[j]:
+                    iou_box1, iou_box2 = calculate_iou(boxes[i], boxes[j])
+
+                    if iou_box1 > overlap_ratio or iou_box2 > overlap_ratio:
+                        if scores[i] < scores[j]:
+                            keep_mask[i] = False
+                        else:
+                            keep_mask[j] = False
+        keep = keep[keep_mask]
         d["instances"][0]["instances"] = d["instances"][0]["instances"][keep]
+
         img = cv2.imread(d["file_name"])
         v = Visualizer(img[:, :, ::-1],
-                    #metadata=plane_metadata, 
-                    scale=1, 
-                    instance_mode=ColorMode.IMAGE_BW   # remove the colors of unsegmented pixels. This option is only available for segmentation models
+                    #metadata=plane_metadata,
+                    scale=1,
+                    instance_mode=ColorMode.IMAGE_BW
         )
         out = v.draw_instance_predictions(d["instances"][0]["instances"].to("cpu"))
         save_path = f"{IMAGE_DIR}/Q1_PD_{idx}.jpg"
@@ -303,22 +356,20 @@ def filter_overlap_bbox(dataset_pred):
         cv2.imwrite(save_path, out.get_image()[:, :, ::-1])
         print(d["file_name"])
         print(f"Image saved to {save_path}")
+
     return dataset_pred
-
-from multiprocessing.pool import ThreadPool
-
-def load_image(file_name):
-    return cv2.imread(file_name)
-
-
+  
+  
 def predict_and_adjust_bbox(dataset_dicts):
     all_predictions = []
     for idx, d in enumerate(dataset_dicts):
         im = cv2.imread(d["file_name"])
+        # print(d["file_name"])
+
         outputs = predictor(im)
         file_number = d["file_name"][-9:-4]
         scores = outputs["instances"].scores
-        keep = scores>0.6
+        keep = scores>0.8
         outputs["instances"] = outputs["instances"][keep]
 
         dx, dy = d["position"]
@@ -456,5 +507,40 @@ def create_output_file(dataset_pred):
 
 final_output = create_output_file(dataset_pred)
 
-with open('./output/dataset_output_part1.json', 'w') as f:
-    json.dump(final_output, f, indent=4)
+with open("./output/dataset_part1.json", "w", encoding="utf8") as f:
+    data = json.dump(final_output, f, indent=2)
+
+
+converted = []
+i = 0
+for image_id, img_data in enumerate(final_output):
+    segmentation = [s for s in img_data["segmentation"] if len(s) > 0]
+    if len(segmentation) <= 0:
+        continue
+    img = cv2.imread(img_data["file_name"])
+    width, height = Image.open(img_data["file_name"]).size
+    mask = GenericMask(segmentation, height, width).mask
+    # os.makedirs("output/convert", exist_ok=True)
+    # cv2.imwrite(f"output/convert/{image_id}.jpg", mask*255)
+    for bbox in img_data["bbox"]:
+        i += 1
+        x1, y1, x2, y2 = int(bbox[0]), int(bbox[1]), int(bbox[2]), int(bbox[3])
+        sub_mask = np.zeros_like(mask)
+        sub_mask[y1:y2, x1:x2] = mask[y1:y2, x1:x2]
+        polygons = GenericMask(sub_mask, height, width).polygons
+        area = np.sum([np.sum(cv2.resize(GenericMask([p], height, width).mask[y1:y2, x1:x2], (128, 128))) for p in polygons])
+        converted_img = {
+            "id": i,
+            "image_id": image_id,
+            "segmentation": [p.tolist() for p in polygons],
+            "category_id": 4,
+            "category_name": "plane",
+            "iscrowd": 0,
+            "bbox": [x1, y1, x2 - x1, y2 - y1],
+            "file_name": os.path.basename(img_data["file_name"]),
+            "area": int(area),
+        }
+        converted.append(converted_img)
+
+with open("./output/dataset_converted_part1_no_exclude_small_area.json", "w", encoding="utf8") as f:
+    data = json.dump(converted, f, indent=2)
