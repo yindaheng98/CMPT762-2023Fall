@@ -16,10 +16,10 @@ learning_rate = 0.1
 weight_decay = 0.0001
 
 model = MyModel() # initialize the model
-model.load_state_dict(torch.load('{}/output/399_segmentation_model_train_by_split.pth'.format(BASE_DIR)))
+# model.load_state_dict(torch.load('{}/output/99_segmentation_model_train_by_split.pth'.format(BASE_DIR)))
 model = model.cuda() # move the model to GPU
 loader, _ = get_plane_dataset('train', batch_size, flip=True, shuffle=True) # initialize data_loader
-crit = nn.BCEWithLogitsLoss() # Define the loss function
+crit = nn.BCELoss() # Define the loss function
 optim = torch.optim.SGD(model.parameters(), momentum=momentum, lr=learning_rate, weight_decay=weight_decay) # Initialize the optimizer as SGD
 from torch.optim.lr_scheduler import MultiStepLR
 # scheduler = CosineAnnealingLR(optim, T_max=num_epochs*len(loader), eta_min=1e-6) #learning rate decay

@@ -9,7 +9,7 @@ from lab3_dataset2 import *
 '''
 batch_size = 32
 model = MyModel().cuda()
-model.load_state_dict(torch.load('{}/output/999_segmentation_model_train_by_split.pth'.format(BASE_DIR)))
+model.load_state_dict(torch.load('{}/output/99_segmentation_model.pth'.format(BASE_DIR)))
 model = model.eval() # chaning the model to evaluation mode will fix the bachnorm layers
 loader, dataset = get_plane_dataset('val', batch_size, flip=False)
 
@@ -21,7 +21,7 @@ for (img, mask) in tqdm(loader):
     img = img.cuda()
     mask = mask.cuda()
     pred = model(img)
-    pred = pred > 0.5
+    pred = pred > 0
     mask = mask > 0.5
     
     intersection = (pred & mask).float().sum((1, 2))  # Will be zero if Truth=0 or Prediction=0
@@ -52,24 +52,26 @@ with torch.no_grad():
   img = img.cuda()
   mask = mask.cuda()
   pred = model(img)
-  pred[pred > 0.5] = 255
-  pred[pred <= 0.5] = 0
-  mask[mask > 0.5] = 255
-  mask[mask <= 0.5] = 0
+  pred_mask = torch.zeros_like(pred, device=pred.device)
+  pred_mask[pred > 0.5] = 255
+  pred *= 255
+  mask *= 255
   mask = mask.cpu().numpy()
   pred = pred.cpu().numpy()
+  pred_mask = pred_mask.cpu().numpy()
   img = img.cpu().numpy()
   for k in range(batch_size):
-    p, m, i = pred[k, ...], mask[k, ...], img[k, ...]
-    fig = plt.figure(figsize=(12, 4))
-    ax = fig.subplots(nrows=1, ncols=3)
+    p, pm, m, i = pred[k, ...], pred_mask[k, ...], mask[k, ...], img[k, ...]
+    fig = plt.figure(figsize=(16, 4))
+    ax = fig.subplots(nrows=1, ncols=4)
     ax[0].imshow(p, cmap='gray')
-    ax[1].imshow(m, cmap='gray')
+    ax[1].imshow(pm, cmap='gray')
+    ax[2].imshow(m, cmap='gray')
     std = [58.395, 57.12, 57.375]
     mean = [123.675, 116.28, 103.53]
     for d in range(3):
       i[d, ...] = i[d, ...] * std[d] + mean[d]
     i = torch.tensor(i).permute((1,2,0)).numpy()
-    ax[2].imshow(i)
+    ax[3].imshow(i)
     fig.savefig(os.path.join(OUTPUT_DIR, f"val_set_{k+1}.png"))
     plt.close(fig=fig)
