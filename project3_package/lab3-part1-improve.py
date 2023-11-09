@@ -173,15 +173,33 @@ cfg.SOLVER.IMS_PER_BATCH = 2
 cfg.SOLVER.BASE_LR = 0.00025
 cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml") # pretrain model
 
+from detectron2.modeling import META_ARCH_REGISTRY, GeneralizedRCNN
+
+@META_ARCH_REGISTRY.register()
+class SlidingWindowRCNN(GeneralizedRCNN):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def forward(self, batched_inputs):
+        batched_outputs = super().forward(batched_inputs)
+        return batched_outputs
+
+    def inference(self, batched_inputs, detected_instances = None, do_postprocess = True):
+        batched_outputs = super().inference(batched_inputs, detected_instances, do_postprocess)
+        return batched_outputs
+
+cfg.MODEL.META_ARCHITECTURE = 'SlidingWindowRCNN'
+
+
 """### Training"""
 
 '''
 # Create a DefaultTrainer using the above config and train the model
 # TODO: approx 5 lines
 '''
-# trainer = DefaultTrainer(cfg)
-# trainer.resume_or_load(resume=False)
-# trainer.train()
+trainer = DefaultTrainer(cfg)
+trainer.resume_or_load(resume=False)
+trainer.train()
 
 """### Evaluation and Visualization"""
 
@@ -201,23 +219,6 @@ For this part, you can bring any improvement which you have by adding new input 
 '''
 # Bring any changes and updates regarding the improvement in here
 '''
-from detectron2.modeling import META_ARCH_REGISTRY, GeneralizedRCNN
-
-@META_ARCH_REGISTRY.register()
-class SlidingWindowArch(GeneralizedRCNN):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def forward(self, *args, **kwargs):
-        print(args, kwargs)
-        return super().forward(*args, **kwargs)
-
-    def inference(self, *args, **kwargs):
-        print(args, kwargs)
-        return super().inference(*args, **kwargs)
-
-cfg.MODEL.META_ARCHITECTURE = 'SlidingWindowArch'
-
 predictor = DefaultPredictor(cfg)
 
 '''
