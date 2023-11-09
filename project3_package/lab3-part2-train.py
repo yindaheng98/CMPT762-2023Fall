@@ -42,7 +42,8 @@ for epoch in range(num_epochs):
   print("Epoch: {}, Loss: {}".format(epoch, total_loss/len(loader)))
   with open("lab3-part2-train.log", "a", encoding="utf8") as f:
     f.write("Epoch: {}, Loss: {}\n".format(epoch, total_loss/len(loader)))
-  torch.save(model.state_dict(), '{}/output/{}_segmentation_model.pth'.format(BASE_DIR, epoch))
+  if epoch % 9 == 0:
+    torch.save(model.state_dict(), '{}/output/{}_segmentation_model.pth'.format(BASE_DIR, epoch))
   print("Next learning rate:", scheduler.get_last_lr())
 
 '''
