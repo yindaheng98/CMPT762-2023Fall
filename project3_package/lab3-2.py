@@ -36,8 +36,21 @@ from detectron2.utils.visualizer import ColorMode
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import build_detection_test_loader
 from detectron2.data import MetadataCatalog, DatasetCatalog
-from detectron2.evaluation import COCOEvaluator, inference_on_dataset
 from detectron2.utils.visualizer import GenericMask
+
+import datetime
+import logging
+import time
+from collections import OrderedDict, abc
+from contextlib import ExitStack, contextmanager
+from typing import List, Union
+import torch
+from torch import nn
+
+from detectron2.utils.comm import get_world_size, is_main_process
+from detectron2.utils.logger import log_every_n_seconds
+
+from detectron2.evaluation import *
 setup_logger()
 
 '''
@@ -209,21 +222,21 @@ for d in ["train", "test", "val", "all"]:
 plane_metadata = MetadataCatalog.get("plane_all")
 
 
-'''
-# Visualize some samples using Visualizer to make sure that the function works correctly
-# TODO: approx 5 lines
-'''
-# Load some samples from the training dataset
-samples = get_detection_data("all")
+# '''
+# # Visualize some samples using Visualizer to make sure that the function works correctly
+# # TODO: approx 5 lines
+# '''
+# # Load some samples from the training dataset
+# samples = get_detection_data("all")
 
-for idx, d in enumerate(random.sample(samples, 1)):
-    img = cv2.imread(d["file_name"])
-    # print(d["file_name"])
-    visualizer = Visualizer(img[:, :, ::-1], metadata=plane_metadata, scale=0.5)
-    out = visualizer.draw_dataset_dict(d)
-    save_path = IMAGE_DIR+f"/Q1_GT_{idx}.jpg"
-    cv2.imwrite(save_path, out.get_image()[:, :, ::-1])
-    print(f"Image saved to {save_path}")
+# for idx, d in enumerate(random.sample(samples, 1)):
+#     img = cv2.imread(d["file_name"])
+#     # print(d["file_name"])
+#     visualizer = Visualizer(img[:, :, ::-1], metadata=plane_metadata, scale=0.5)
+#     out = visualizer.draw_dataset_dict(d)
+#     save_path = IMAGE_DIR+f"/Q1_GT_{idx}.jpg"
+#     cv2.imwrite(save_path, out.get_image()[:, :, ::-1])
+#     print(f"Image saved to {save_path}")
 
 
 '''
@@ -233,7 +246,7 @@ for idx, d in enumerate(random.sample(samples, 1)):
 cfg = get_cfg()
 cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_101_FPN_3x.yaml"))
 
-cfg.OUTPUT_DIR = "{}/output/".format(BASE_DIR)
+cfg.OUTPUT_DIR = "{}output".format(BASE_DIR)
 
 cfg.DATASETS.TRAIN = ("plane_all",)
 cfg.DATASETS.TEST = ()
@@ -244,25 +257,25 @@ cfg.SOLVER.IMS_PER_BATCH = 2          # Number of images per batch
 cfg.MODEL.ROI_HEADS.BATCH_SIZE_PER_IMAGE = 512  # Number of regions per image for training
 os.makedirs(cfg.OUTPUT_DIR, exist_ok=True)
 # 4. Pretrain Model
-cfg.MODEL.WEIGHTS = "{}/500_detection_model.pth".format(cfg.OUTPUT_DIR)
+# cfg.MODEL.WEIGHTS = "{}/500_detection_model.pth".format(cfg.OUTPUT_DIR)
 
 
 '''
 # Create a DefaultTrainer using the above config and train the model
 # TODO: approx 5 lines
 '''
-#trainer = DefaultTrainer(cfg)
-#trainer.resume_or_load(resume=False)
-#trainer.train()
+# trainer = DefaultTrainer(cfg)
+# trainer.resume_or_load(resume=False)
+# trainer.train()
 
 
 '''
 # After training the model, you need to update cfg.MODEL.WEIGHTS
 # Define a DefaultPredictor
 '''
-cfg.MODEL.WEIGHTS = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")  # path to the model we just trained
+cfg.MODEL.WEIGHTS = "{}/500_detection_model.pth".format(cfg.OUTPUT_DIR)  # path to the model we just trained
 cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.6   # set a custom testing threshold
-predictor = DefaultPredictor(cfg)
+object_detection_predictor = DefaultPredictor(cfg)
 
 
 '''
@@ -332,7 +345,7 @@ def predict_and_adjust_bbox(dataset_dicts):
     all_predictions = []
     for idx, d in enumerate(dataset_dicts):
         im = cv2.imread(d["file_name"])
-        outputs = predictor(im)
+        outputs = object_detection_predictor(im)
         file_number = d["file_name"][-9:-4]
         scores = outputs["instances"].scores
         keep = scores>0.6
@@ -385,6 +398,117 @@ def create_predict_result(dataset_dicts):
 
     return filter_overlap_bbox(dataset_pred)
 
+def customized_inference_on_dataset(
+    pred_result, model, data_loader, evaluator: Union[DatasetEvaluator, List[DatasetEvaluator], None]
+):
+    """
+    Run model on the data_loader and evaluate the metrics with evaluator.
+    Also benchmark the inference speed of `model.__call__` accurately.
+    The model will be used in eval mode.
+
+    Args:
+        model (callable): a callable which takes an object from
+            `data_loader` and returns some outputs.
+
+            If it's an nn.Module, it will be temporarily set to `eval` mode.
+            If you wish to evaluate a model in `training` mode instead, you can
+            wrap the given model and override its behavior of `.eval()` and `.train()`.
+        data_loader: an iterable object with a length.
+            The elements it generates will be the inputs to the model.
+        evaluator: the evaluator(s) to run. Use `None` if you only want to benchmark,
+            but don't want to do any evaluation.
+
+    Returns:
+        The return value of `evaluator.evaluate()`
+    """
+    num_devices = get_world_size()
+    logger = logging.getLogger(__name__)
+    logger.info("Start inference on {} batches".format(len(data_loader)))
+
+    total = len(data_loader)  # inference data loader must have a fixed length
+    if evaluator is None:
+        # create a no-op evaluator
+        evaluator = DatasetEvaluators([])
+    if isinstance(evaluator, abc.MutableSequence):
+        evaluator = DatasetEvaluators(evaluator)
+    evaluator.reset()
+
+    num_warmup = min(5, total - 1)
+    start_time = time.perf_counter()
+    total_data_time = 0
+    total_compute_time = 0
+    total_eval_time = 0
+    with ExitStack() as stack:
+        if isinstance(model, nn.Module):
+            stack.enter_context(inference_context(model))
+        stack.enter_context(torch.no_grad())
+
+        start_data_time = time.perf_counter()
+        for idx, inputs in enumerate(data_loader):
+            total_data_time += time.perf_counter() - start_data_time
+            if idx == num_warmup:
+                start_time = time.perf_counter()
+                total_data_time = 0
+                total_compute_time = 0
+                total_eval_time = 0
+
+            start_compute_time = time.perf_counter()
+            # outputs = model(inputs)
+            
+            outputs = pred_result[idx]["instances"]
+            
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
+            total_compute_time += time.perf_counter() - start_compute_time
+
+            start_eval_time = time.perf_counter()
+            evaluator.process(inputs, outputs)
+            total_eval_time += time.perf_counter() - start_eval_time
+
+            iters_after_start = idx + 1 - num_warmup * int(idx >= num_warmup)
+            data_seconds_per_iter = total_data_time / iters_after_start
+            compute_seconds_per_iter = total_compute_time / iters_after_start
+            eval_seconds_per_iter = total_eval_time / iters_after_start
+            total_seconds_per_iter = (time.perf_counter() - start_time) / iters_after_start
+            if idx >= num_warmup * 2 or compute_seconds_per_iter > 5:
+                eta = datetime.timedelta(seconds=int(total_seconds_per_iter * (total - idx - 1)))
+                log_every_n_seconds(
+                    logging.INFO,
+                    (
+                        f"Inference done {idx + 1}/{total}. "
+                        f"Dataloading: {data_seconds_per_iter:.4f} s/iter. "
+                        f"Inference: {compute_seconds_per_iter:.4f} s/iter. "
+                        f"Eval: {eval_seconds_per_iter:.4f} s/iter. "
+                        f"Total: {total_seconds_per_iter:.4f} s/iter. "
+                        f"ETA={eta}"
+                    ),
+                    n=5,
+                )
+            start_data_time = time.perf_counter()
+
+    # Measure the time only for this worker (before the synchronization barrier)
+    total_time = time.perf_counter() - start_time
+    total_time_str = str(datetime.timedelta(seconds=total_time))
+    # NOTE this format is parsed by grep
+    logger.info(
+        "Total inference time: {} ({:.6f} s / iter per device, on {} devices)".format(
+            total_time_str, total_time / (total - num_warmup), num_devices
+        )
+    )
+    total_compute_time_str = str(datetime.timedelta(seconds=int(total_compute_time)))
+    logger.info(
+        "Total inference pure compute time: {} ({:.6f} s / iter per device, on {} devices)".format(
+            total_compute_time_str, total_compute_time / (total - num_warmup), num_devices
+        )
+    )
+
+    results = evaluator.evaluate()
+    # An evaluator may return None when not in main process.
+    # Replace it by an empty dict instead to make it easier for downstream code to handle
+    if results is None:
+        results = {}
+    return results
+
 dataset_dicts = get_detection_data("all")
 dataset_pred = create_predict_result(dataset_dicts)
 
@@ -395,5 +519,4 @@ dataset_pred = create_predict_result(dataset_dicts)
 '''
 evaluator = COCOEvaluator("plane_test", output_dir="./COCO_output")
 val_loader = build_detection_test_loader(cfg, "plane_test")
-print(inference_on_dataset(dataset_pred, predictor.model, val_loader, evaluator))
-
+print(customized_inference_on_dataset(dataset_pred, object_detection_predictor.model, val_loader, evaluator))
