@@ -209,9 +209,11 @@ class SlidingWindowArch(GeneralizedRCNN):
         super().__init__(*args, **kwargs)
 
     def forward(self, *args, **kwargs):
+        print(args, kwargs)
         return super().forward(*args, **kwargs)
 
     def inference(self, *args, **kwargs):
+        print(args, kwargs)
         return super().inference(*args, **kwargs)
 
 cfg.MODEL.META_ARCHITECTURE = 'SlidingWindowArch'
@@ -223,8 +225,7 @@ predictor = DefaultPredictor(cfg)
 # TODO: approx 10 lines
 '''
 test_set = get_detection_data("test")
-for i in range(3):
-    idx = random.randrange(0, len(test_set))
+for idx in [9,21,54,51]:
     data = test_set[idx]
     img = cv2.imread(data["file_name"])
     result = predictor(img)
