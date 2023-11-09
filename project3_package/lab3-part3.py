@@ -87,9 +87,6 @@ def get_prediction_mask(data, obj_detect_model, seg_model):
       
       sig_pred = pred
       
-      # Take the first class (plane)
-      sig_pred = sig_pred[:, 0, :, :]
-      
       sig_pred[sig_pred > 0.5] = idx + 1
       sig_pred[sig_pred <= 0.5] = 0
       
@@ -251,7 +248,8 @@ def plot_part3_result(num_of_images=None, data_set='test'):
 
     plt.cla()
     if data_set == 'test':
-      fig, ax = plt.subplots(1, 3)
+      fig = plt.figure(figsize=(12, 4))
+      ax = fig.subplots(1, 3)
       ax[0].imshow(img, vmin=0, vmax=255)
       ax[1].imshow(colored_pred, vmin=0, vmax=255)
       visualizer = Visualizer(img[:, :, ::-1], metadata=MetadataCatalog.get("data_detection_train"), scale=1)
@@ -259,7 +257,8 @@ def plot_part3_result(num_of_images=None, data_set='test'):
       ax[2].imshow(bbox_visual.get_image()[:, :, ::-1])
       
     else:
-      fig, ax = plt.subplots(1, 4)
+      fig = plt.figure(figsize=(16, 4))
+      ax = fig.subplots(1, 4)
       ax[0].imshow(img, vmin=0, vmax=255)
       ax[1].imshow(colored_pred, vmin=0, vmax=255)
       visualizer = Visualizer(img[:, :, ::-1], metadata=MetadataCatalog.get("data_detection_train"), scale=1)
@@ -294,4 +293,4 @@ if __name__ == "__main__":
 
   generate_pred_csv()
 
-  plot_part3_result(10, 'val')
+  plot_part3_result(10, 'test')
