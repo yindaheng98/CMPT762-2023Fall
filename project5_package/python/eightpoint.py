@@ -21,7 +21,9 @@ def eightpoint(pts1, pts2, M):
     SVDResults = svd(A)
     U, S, V = SVDResults.U, SVDResults.S, SVDResults.Vh
     v = V[np.argmin(S)]
-    F = v.reshape((3, 3))
-    for v in V:
-        print(matrix_rank(v.reshape((3, 3))))
+    F3 = v.reshape((3, 3))
+    SVDResults = svd(F3)
+    U, S, V = SVDResults.U, SVDResults.S, SVDResults.Vh
+    S[-1] = 0
+    F = np.dot(U * S.reshape((1, -1)), V)
     return F
