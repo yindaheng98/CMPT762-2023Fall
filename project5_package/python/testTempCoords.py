@@ -20,6 +20,7 @@ pts2 = pts['pts2']
 M = pts['M']
 
 # write your code here
+F = eightpoint(pts1, pts2, M)
 R1, t1 = np.eye(3), np.zeros((3, 1))
 R2, t2 = np.eye(3), np.zeros((3, 1))
 
