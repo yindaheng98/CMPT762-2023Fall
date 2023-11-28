@@ -37,4 +37,6 @@ def epipolarCorrespondence(im1, im2, F, pts1):
     xr, yr = xr[yr<yr_max-patch_size], yr[yr<yr_max-patch_size]
     patch_l = get_patch(im1, xl, yl, patch_size)
     diff = np.array([np.sum(np.abs(patch_l-get_patch(im2, x, y, patch_size))) for x, y in zip(xr, yr)])
+    # distance = np.abs(xr-xl) ** 2 + np.abs(yr-yl) ** 2
+    # diff[distance>2048] = np.max(diff)
     return np.array([[xr[np.argmin(diff)], yr[np.argmin(diff)]]])
