@@ -22,6 +22,7 @@ M = pts['M']
 # write your code here
 F = eightpoint(pts1, pts2, M)
 displayEpipolarF(img1, img2, F)
+epipolarMatchGUI(img1, img2, F)
 R1, t1 = np.eye(3), np.zeros((3, 1))
 R2, t2 = np.eye(3), np.zeros((3, 1))
 
