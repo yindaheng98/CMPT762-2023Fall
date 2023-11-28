@@ -9,5 +9,5 @@ def essentialMatrix(F, K1, K2):
     Returns:
         E:  Essential Matrix  
     """
-    E = None
+    E = np.dot(np.dot(K2.T, F), K1)
     return E

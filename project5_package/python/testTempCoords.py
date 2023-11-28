@@ -21,8 +21,11 @@ M = pts['M']
 
 # write your code here
 F = eightpoint(pts1, pts2, M)
-displayEpipolarF(img1, img2, F)
-epipolarMatchGUI(img1, img2, F)
+# displayEpipolarF(img1, img2, F)
+# epipolarMatchGUI(img1, img2, F)
+intrinsics = np.load('../data/intrinsics.npy', allow_pickle=True).tolist()
+K1, K2 = intrinsics['K1'], intrinsics['K2']
+E = essentialMatrix(F, K1, K2)
 R1, t1 = np.eye(3), np.zeros((3, 1))
 R2, t2 = np.eye(3), np.zeros((3, 1))
 
