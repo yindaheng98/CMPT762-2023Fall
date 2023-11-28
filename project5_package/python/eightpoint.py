@@ -33,5 +33,5 @@ def eightpoint(pts1, pts2, M):
     U, S, V = SVDResults.U, SVDResults.S, SVDResults.Vh
     v = V[np.argmin(S)]
     F = v.reshape((3, 3))
-    # return refineF((T2.T @ F @ T1).reshape(-1), pts1, pts2).reshape((3, 3))
-    return T2.T @ rank2F(F) @ T1
+    return refineF((T1.T @ F @ T2).reshape(-1), pts1, pts2).reshape((3, 3))
+    # return T1.T @ rank2F(F) @ T2

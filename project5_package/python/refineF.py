@@ -8,7 +8,7 @@ def refineF(F, pts1, pts2):
     initF = F.copy()
 
     # Do the minimization
-    res = minimize(svd_distance, initF, args=(X, Y), method='L-BFGS-B', options={'maxiter': 100000, 'maxfun': 10000})
+    res = minimize(svd_distance, initF, args=(X, Y), method='Nelder-Mead', options={'maxiter': 100000})
     minF = res.x.reshape((3, 3))
     F = rank2F(minF)
     return F
