@@ -1,7 +1,7 @@
 import numpy as np
 from numpy.linalg import svd
 from numpy.linalg import matrix_rank
-from refineF import refineF
+from refineF import refineF, rank2F
 
 def eightpoint(pts1, pts2, M):
     """
@@ -24,11 +24,7 @@ def eightpoint(pts1, pts2, M):
     SVDResults = svd(A)
     U, S, V = SVDResults.U, SVDResults.S, SVDResults.Vh
     v = V[np.argmin(S)]
-    F3 = v.reshape((3, 3))
-    SVDResults = svd(F3)
-    U, S, V = SVDResults.U, SVDResults.S, SVDResults.Vh
-    S[-1] = 0
-    F = np.dot(U * S.reshape((1, -1)), V)
+    F = v.reshape((3, 3))
     T = np.array([1/M, 1/M, 1])
-    # return refineF((T.reshape((-1, 1)) * F3 * T.reshape((1, -1))).reshape(-1), pts1, pts2).reshape((3, 3))
-    return T.reshape((-1, 1)) * F * T.reshape((1, -1))
+    # return refineF((T.reshape((-1, 1)) * F * T.reshape((1, -1))).reshape(-1), pts1, pts2).reshape((3, 3))
+    return T.reshape((-1, 1)) * rank2F(F) * T.reshape((1, -1))
