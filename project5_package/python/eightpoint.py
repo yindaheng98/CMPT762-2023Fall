@@ -30,4 +30,5 @@ def eightpoint(pts1, pts2, M):
     S[-1] = 0
     F = np.dot(U * S.reshape((1, -1)), V)
     T = np.array([1/M, 1/M, 1])
+    # return refineF((T.reshape((-1, 1)) * F3 * T.reshape((1, -1))).reshape(-1), pts1, pts2).reshape((3, 3))
     return T.reshape((-1, 1)) * F * T.reshape((1, -1))
