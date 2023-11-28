@@ -44,6 +44,7 @@ R2, t2 = P2[:, 0:3], P2[:, 3]
 # save extrinsic parameters for dense reconstruction
 np.save('../results/extrinsics', {'R1': R1, 't1': t1, 'R2': R2, 't2': t2})
 
-pts1_, pts2_ = np.dot(np.dot(pts3d, R1.T) + t1, K1.T), np.dot(np.dot(pts3d, R2.T) + t2, K2.T)
+pts3d1 = np.concatenate([pts3d, np.ones((pts3d.shape[0], 1))], axis=1)
+pts1_, pts2_ = np.dot(pts3d1, np.dot(K1, P1).T), np.dot(pts3d1, np.dot(K2, P2).T)
 pts1_, pts2_ = (pts1_/pts1_[:, -1:])[:, 0:2], (pts2_/pts2_[:, -1:])[:, 0:2]
 print(np.average(np.abs(pts1_-pts1)), np.average(np.abs(pts2_-pts2)))
