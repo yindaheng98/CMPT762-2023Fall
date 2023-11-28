@@ -26,8 +26,24 @@ F = eightpoint(pts1, pts2, M)
 intrinsics = np.load('../data/intrinsics.npy', allow_pickle=True).tolist()
 K1, K2 = intrinsics['K1'], intrinsics['K2']
 E = essentialMatrix(F, K1, K2)
-R1, t1 = np.eye(3), np.zeros((3, 1))
-R2, t2 = np.eye(3), np.zeros((3, 1))
+M2s = camera2(E)
+P1 = np.concatenate([np.diag([1, 1, 1]), np.zeros((3, 1))], axis=1)
+for i in range(M2s.shape[2]):
+    P2 = M2s[:, :, i]
+    pts3d = triangulate(np.dot(K1, P1), pts1, np.dot(K2, M2s[:, :, i]), pts2)
+    pts3d1 = np.concatenate([pts3d, np.ones((pts3d.shape[0], 1))], axis=1)
+    pts1_c, pts2_c = np.dot(pts3d1, P1.T), np.dot(pts3d1, P2.T)
+    z1_min, z2_min = min(pts1_c[:, -1]), min(pts2_c[:, -1])
+    if z1_min >= 0 and z2_min >= 0:
+        break
+else:
+    raise "No valid solution"
+R1, t1 = P1[:, 0:3], P1[:, 3]
+R2, t2 = P2[:, 0:3], P2[:, 3]
 
 # save extrinsic parameters for dense reconstruction
 np.save('../results/extrinsics', {'R1': R1, 't1': t1, 'R2': R2, 't2': t2})
+
+pts1_, pts2_ = np.dot(np.dot(pts3d, R1.T) + t1, K1.T), np.dot(np.dot(pts3d, R2.T) + t2, K2.T)
+pts1_, pts2_ = (pts1_/pts1_[:, -1:])[:, 0:2], (pts2_/pts2_[:, -1:])[:, 0:2]
+print(np.average(np.abs(pts1_-pts1)), np.average(np.abs(pts2_-pts2)))
