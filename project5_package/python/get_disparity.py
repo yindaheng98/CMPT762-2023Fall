@@ -7,12 +7,10 @@ def diff_patches(patch, patches, maxDisp):
     patch_ = patch.reshape((patch.shape[0], -1))
     patch_mean = patch_.mean(axis=1)
     patch_std = patch_.std(axis=1)
-    patch_std[patch_std < 1e-6] = 1e-6
 
     patches_ = patches.reshape((patches.shape[0], -1))
     patches_mean = patches_.mean(axis=1)
     patches_std = patches_.std(axis=1)
-    patches_std[patches_std < 1e-6] = 1e-6
 
     mean_ = (patch_.T - patch_mean).T
     means_ = (patches_.T - patches_mean).T
@@ -42,6 +40,7 @@ def get_disparity(im1, im2, maxDisp, windowSize):
         patch_r = np.array([get_patch(im2, x2, y, w) for x2 in range(0, x2_max)])
         diff = diff_patches(patch_l, patch_r, maxDisp)
         x_min, x_max = maxDisp//2, min(x1_max, x2_max)-maxDisp//2
-        dispM[y, x_min:x_max] = x1s[x_min:x_max] - np.argmax(diff, axis=1)
-        dispM[np.sum(diff) == 0, :] = 0
+        dispMline = x1s[x_min:x_max] - np.argmax(diff, axis=1)
+        dispMline[np.sum(diff, axis=1) == 0] = 0
+        dispM[y, x_min:x_max] = dispMline
     return dispM
