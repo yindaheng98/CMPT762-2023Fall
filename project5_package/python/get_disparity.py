@@ -1,6 +1,5 @@
 import numpy as np
 from epipolarCorrespondence import get_patch
-import tqdm
 
 
 def diff_patches(patch, patches, maxDisp):
@@ -35,9 +34,8 @@ def get_disparity(im1, im2, maxDisp, windowSize):
     y1_max, x1_max = im1.shape[:2]
     y2_max, x2_max = im2.shape[:2]
     for y in range(min(y1_max, y2_max)):
-        x1s = np.array(list(range(x1_max)))
-        patch_l = np.array([get_patch(im1, x1, y, w) for x1 in x1s])
-        patch_r = np.array([get_patch(im2, x2, y, w) for x2 in range(0, x2_max)])
+        patch_l = np.array([get_patch(im1, x1, y, w) for x1 in range(x1_max)])
+        patch_r = np.array([get_patch(im2, x2, y, w) for x2 in range(x2_max)])
         diff = diff_patches(patch_l, patch_r, maxDisp)
         x_min, x_max = maxDisp//2, min(x1_max, x2_max)-maxDisp//2
         dispMline = maxDisp//2 - np.argmax(diff, axis=1)
