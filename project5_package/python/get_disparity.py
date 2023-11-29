@@ -40,7 +40,7 @@ def get_disparity(im1, im2, maxDisp, windowSize):
         patch_r = np.array([get_patch(im2, x2, y, w) for x2 in range(0, x2_max)])
         diff = diff_patches(patch_l, patch_r, maxDisp)
         x_min, x_max = maxDisp//2, min(x1_max, x2_max)-maxDisp//2
-        dispMline = x1s[x_min:x_max] - np.argmax(diff, axis=1)
-        dispMline[np.sum(diff, axis=1) == 0] = 0
+        dispMline = maxDisp//2 - np.argmax(diff, axis=1)
+        dispMline[np.sum(diff, axis=1) < 1e-6] = 0
         dispM[y, x_min:x_max] = dispMline
     return dispM
