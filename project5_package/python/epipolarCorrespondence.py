@@ -9,10 +9,10 @@ def get_patch(im, x, y, patch_size):
     y_max, x_max = im.shape[:2]
     xd, xt = max(0, x-patch_size), min(x+patch_size, x_max)
     yd, yt = max(0, y-patch_size), min(y+patch_size, y_max)
-    patch = np.zeros((patch_size * 2 + 1, patch_size * 2 + 1, 3))
+    patch = np.zeros([patch_size * 2 + 1, patch_size * 2 + 1, *im.shape[2:]])
     xd_, xt_ = max(patch_size-x, 0), patch_size + min(x_max-x, patch_size)
     yd_, yt_ = max(patch_size-y, 0), patch_size + min(y_max-y, patch_size)
-    patch[yd_:yt_, xd_:xt_, :] = im[yd:yt, xd:xt, :]
+    patch[yd_:yt_, xd_:xt_, ...] = im[yd:yt, xd:xt, ...]
     return patch
 
 
@@ -28,6 +28,7 @@ def diff_patches(patch, patches):
 
     mean = np.mean((patch_ - patch_mean) * (patches_.T - patches_mean).T, axis=1)
     std = patch_std * patches_std
+    std[std < 1e-6] = 1e-6
 
     return mean / std
 

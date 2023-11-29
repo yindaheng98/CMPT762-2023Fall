@@ -1,0 +1,32 @@
+{
+    // 使用 IntelliSense 了解相关属性。 
+    // 悬停以查看现有属性的描述。
+    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "testTempCoords",
+            "type": "python",
+            "request": "launch",
+            "program": "testTempCoords.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "testRectify",
+            "type": "python",
+            "request": "launch",
+            "program": "testRectify.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "testDepth",
+            "type": "python",
+            "request": "launch",
+            "program": "testDepth.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}
