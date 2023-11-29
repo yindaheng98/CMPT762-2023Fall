@@ -16,19 +16,19 @@ def mcbb(s1, s2, H1, H2):
     corners = np.array([[0, 0, s1[1], s1[1]], [0, s1[0], 0, s1[0]]])
     corners_x = p2t(H1, corners)
 
-    minx = np.floor(min(corners_x[0, :])).astype(np.int)
-    maxx = np.ceil(max(corners_x[0, :])).astype(np.int)
-    miny = np.floor(min(corners_x[1, :])).astype(np.int)
-    maxy = np.ceil(max(corners_x[1, :])).astype(np.int)
+    minx = np.floor(min(corners_x[0, :])).astype(np.int32)
+    maxx = np.ceil(max(corners_x[0, :])).astype(np.int32)
+    miny = np.floor(min(corners_x[1, :])).astype(np.int32)
+    maxy = np.ceil(max(corners_x[1, :])).astype(np.int32)
     bb1 = [minx, miny, maxx, maxy]
 
     corners = np.array([[0, 0, s2[1], s2[1]], [0, s2[0], 0, s2[0]]])
     corners_x = p2t(H2, corners)
 
-    minx = np.floor(min(corners_x[0, :])).astype(np.int)
-    maxx = np.ceil(max(corners_x[0, :])).astype(np.int)
-    miny = np.floor(min(corners_x[1, :])).astype(np.int)
-    maxy = np.ceil(max(corners_x[1, :])).astype(np.int)
+    minx = np.floor(min(corners_x[0, :])).astype(np.int32)
+    maxx = np.ceil(max(corners_x[0, :])).astype(np.int32)
+    miny = np.floor(min(corners_x[1, :])).astype(np.int32)
+    maxy = np.ceil(max(corners_x[1, :])).astype(np.int32)
     bb2 = [minx, miny, maxx, maxy]
 
     q1 = np.min(np.array([bb1, bb2]), axis=0)
