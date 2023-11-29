@@ -7,8 +7,8 @@ def rectify_pair(K1, K2, R1, R2, t1, t2):
     can test your function using the provided script testRectify.py
     """
     c1, c2 = -np.dot(t1, R1), -np.dot(t2, R2)
-    r1 = (c2 - c1) / np.linalg.norm(c2 - c1)
-    r2 = np.cross(R1[2, :], r1)
+    r1 = (c1 - c2) / np.linalg.norm(c1 - c2)
+    r2 = np.cross(R1[:, 2], r1)
     r3 = np.cross(r1, r2)
     R1n = R2n = np.array([r1, r2, r3]).T
     K1n = K2n = K1
