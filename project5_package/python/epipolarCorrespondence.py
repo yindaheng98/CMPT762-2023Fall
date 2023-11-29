@@ -16,8 +16,20 @@ def get_patch(im, x, y, patch_size):
     return patch
 
 
-def diff_patch(a, b):
-    return np.mean((a - a.mean()) * (b - b.mean())) / (a.std() * b.std())
+def diff_patches(patch, patches):
+    patch_ = patch.reshape(-1)
+    patch_mean = patch_.mean()
+    patch_std = patch_.std()
+
+    patches_ = patches.reshape((patches.shape[0], -1))
+    patches_mean = patches_.mean(axis=1)
+    patches_std = patches_.std(axis=1)
+    patches_std[patches_std < 1e-6] = 1e-6
+
+    mean = np.mean((patch_ - patch_mean) * (patches_.T - patches_mean).T, axis=1)
+    std = patch_std * patches_std
+
+    return mean / std
 
 
 def epipolarCorrespondence(im1, im2, F, pts1):
@@ -47,5 +59,6 @@ def epipolarCorrespondence(im1, im2, F, pts1):
 
     im1_YCrCb, im2_YCrCb = cv2.cvtColor(im1, cv2.COLOR_BGR2YCrCb), cv2.cvtColor(im2, cv2.COLOR_BGR2YCrCb)
     patch_l = get_patch(im1_YCrCb, xl, yl, patch_size)
-    diff = np.array([diff_patch(patch_l, get_patch(im2_YCrCb, x, y, patch_size)) for x, y in zip(xr, yr)])
+    patch_r = np.array([get_patch(im2_YCrCb, x, y, patch_size) for x, y in zip(xr, yr)])
+    diff = diff_patches(patch_l, patch_r)
     return np.array([[xr[np.argmax(diff)], yr[np.argmax(diff)]]])
