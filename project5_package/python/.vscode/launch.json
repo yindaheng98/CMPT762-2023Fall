@@ -27,6 +27,14 @@
             "program": "testDepth.py",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "testPose",
+            "type": "python",
+            "request": "launch",
+            "program": "testPose.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }
