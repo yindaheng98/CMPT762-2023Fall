@@ -13,15 +13,22 @@ def diff_patches(patch, patches, maxDisp):
 
     mean_ = (patch_.T - patch_mean).T
     means_ = (patches_.T - patches_mean).T
+
     w = maxDisp//2
     x_max = min(mean_.shape[0], means_.shape[0])-w
+    patches_split = np.array([patches_[x-w:x+w, :] for x in range(w, x_max)])
     means_split = np.array([means_[x-w:x+w, :] for x in range(w, x_max)])
     stds_split = np.array([patches_std[x-w:x+w] for x in range(w, x_max)])
+
+    ediff = patch_[w:x_max] - patches_split.transpose((1, 0, 2))
+    edist = np.sum(ediff * ediff, axis=2).T
+
     mean = np.mean(mean_[w:x_max, :] * means_split.transpose((1, 0, 2)), axis=2)
     std = (patch_std[w:x_max] * stds_split.T)
     std[std < 1e-6] = 1e-6
+    corr = (mean / std).T
 
-    return (mean / std).T
+    return corr
 
 
 def get_disparity(im1, im2, maxDisp, windowSize):
