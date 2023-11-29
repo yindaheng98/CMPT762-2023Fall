@@ -2,7 +2,7 @@ import numpy as np
 from epipolarCorrespondence import get_patch
 
 
-def diff_patches(patch, patches, wl, wr):
+def d_patches(patch, patches, wl, wr):
     patch_ = patch.reshape((patch.shape[0], -1))
     patch_mean = patch_.mean(axis=1)
     patch_std = patch_.std(axis=1)
@@ -21,13 +21,18 @@ def diff_patches(patch, patches, wl, wr):
 
     ediff = patch_[wl:x_max] - patches_split.transpose((1, 0, 2))
     edist = np.sum(ediff * ediff, axis=2).T
+    d_edist = wl + wr - np.argmin(edist, axis=1)
 
     mean = np.mean(mean_[wl:x_max, :] * means_split.transpose((1, 0, 2)), axis=2)
     std = (patch_std[wl:x_max] * stds_split.T)
     std[std < 1e-6] = 1e-6
     corr = (mean / std).T
+    d_corr = wl + wr - np.argmax(corr, axis=1)
+    d_corr[np.sum(corr, axis=1) < 1e-6] = 0
 
-    return corr
+    d = np.zeros(patch.shape[0])
+    d[wl:x_max] = d_edist
+    return d
 
 
 def get_disparity(im1, im2, maxDisp, windowSize):
@@ -42,10 +47,6 @@ def get_disparity(im1, im2, maxDisp, windowSize):
     for y in range(min(y1_max, y2_max)):
         patch_l = np.array([get_patch(im1, x1, y, w) for x1 in range(x1_max)])
         patch_r = np.array([get_patch(im2, x2, y, w) for x2 in range(x2_max)])
-        wl, wr = maxDisp//2, maxDisp//2
-        diff = diff_patches(patch_l, patch_r, wl, wr)
-        x_min, x_max = wl, min(x1_max, x2_max)-wr
-        dispMline = wl - np.argmax(diff, axis=1)
-        dispMline[np.sum(diff, axis=1) < 1e-6] = 0
-        dispM[y, x_min:x_max] = dispMline
+        wl, wr = maxDisp, 0
+        dispM[y, :] = d_patches(patch_l, patch_r, wl, wr)
     return dispM
