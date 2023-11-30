@@ -2,6 +2,7 @@ from itertools import product
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+from get_depth2 import get_depth
 
 extrinsics = {}
 img_names = []
@@ -29,3 +30,15 @@ plt.scatter(x=pts2d[:, 0], y=pts2d[:, 1], marker='x')
 plt.axis('image')
 plt.savefig('../results/corners.png', dpi=300)
 plt.close()
+
+camera_pose = -np.dot(t, np.linalg.inv(R))
+distance = np.linalg.norm(pts3d - camera_pose, axis=1)
+depths = np.linspace(np.min(distance), np.max(distance), 16)
+patch_size = 5
+depth = get_depth(
+    im0,
+    extrinsics[img_names[0]],
+    [cv2.imread("../data/" + name) for name in img_names[1:]],
+    [extrinsics[name] for name in img_names[1:]],
+    patch_size, depths
+)

@@ -14,7 +14,7 @@ def GetProjCoord(pts3d, extrinsic):
     K, R, t = extrinsic
     n_pts, n_depths = pts3d.shape[0:2]
     pts2d3 = np.dot(np.dot(pts3d.reshape((n_pts * n_depths, 3)), R.T) + t, K.T)
-    return (pts2d3.T/pts2d3[:, 2]).T[:, 0:2].reshape((n_pts, n_depths, 2))
+    return (pts2d3.T/pts2d3[:, 2]).T[:, 0:2].reshape((n_pts, n_depths, 2)).astype(int)
 
 def get_depth(img, extrinsic, imgs, extrinsics, patch_size, depths):
     """
