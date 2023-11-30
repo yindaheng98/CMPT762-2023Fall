@@ -43,6 +43,14 @@
             "program": "testKRt.py",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "testFinal",
+            "type": "python",
+            "request": "launch",
+            "program": "testFinal.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }
