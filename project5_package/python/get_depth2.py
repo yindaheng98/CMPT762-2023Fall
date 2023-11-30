@@ -22,7 +22,8 @@ def GetProjCoord(pts3d, extrinsic):
     return (pts2d3.T/pts2d3[:, 2]).T[:, 0:2].reshape((n_pts, n_depths, 2)).astype(int)
 
 
-def GetProjCoordMap(pts2idx, pts2d, y_max, x_max):
+def GetProjCoordMap(pts2idx, pts3d, extrinsic, y_max, x_max):
+    pts2d = GetProjCoord(pts3d, extrinsic)
     ptsmap = np.zeros((y_max, x_max, *pts2d.shape[1:])) - 1
     ptsmap[pts2idx] = pts2d
     return ptsmap
@@ -36,6 +37,5 @@ def get_depth(img, extrinsic, imgs, extrinsics, patch_size, depths):
     mask = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) > 40
     pts2idx = np.where(mask)
     pts3d = Get3dCoord(np.array(pts2idx).T, extrinsic, depths)
-    pts2ds = [GetProjCoord(pts3d, e) for e in extrinsics]
-    pts2dmaps = [GetProjCoordMap(pts2idx, pts2d, y_max, x_max) for pts2d in pts2ds]
+    pts2dmaps = [GetProjCoordMap(pts2idx, pts3d, e, y_max, x_max) for e in extrinsics]
     pass
