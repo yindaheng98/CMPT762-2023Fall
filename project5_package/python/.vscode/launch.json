@@ -35,6 +35,14 @@
             "program": "testPose.py",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "testKRt",
+            "type": "python",
+            "request": "launch",
+            "program": "testKRt.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }
