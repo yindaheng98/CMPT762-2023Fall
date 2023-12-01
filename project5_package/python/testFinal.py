@@ -2,6 +2,7 @@ from itertools import product
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
+import open3d as o3d
 from get_depth2 import get_depth
 
 extrinsics = {}
@@ -33,17 +34,25 @@ plt.close()
 
 camera_pose = -np.dot(t, np.linalg.inv(R).T)
 distance = np.linalg.norm(pts3d - camera_pose, axis=1)
-depths = np.linspace(np.min(distance), np.max(distance), 16)
+depths = np.linspace(np.min(distance), np.max(distance), 256)
 patch_size = 5
-depthsmap = get_depth(
+depthsmap, colors, pts2dxyz = get_depth(
     im0,
     extrinsics[img_names[0]],
     [cv2.imread("../data/" + name) for name in img_names[1:]],
     [extrinsics[name] for name in img_names[1:]],
     patch_size, depths
 )
+
 plt.figure()
 plt.imshow(depthsmap, cmap='gray')
 plt.axis('image')
 plt.savefig('../results/depthsmap.png', dpi=300)
 plt.close()
+
+P = np.dot(K, np.concatenate((R.T, [t])).T)
+pts3d = np.dot(pts2dxyz - P[:, 3], np.linalg.inv(P[:, 0:3]).T)
+pcd = o3d.geometry.PointCloud()
+pcd.points = o3d.utility.Vector3dVector(pts3d)
+pcd.colors = o3d.utility.Vector3dVector(colors / 255)
+o3d.io.write_point_cloud("../results/temple.pcd", pcd)

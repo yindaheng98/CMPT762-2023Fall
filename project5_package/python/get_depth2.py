@@ -80,4 +80,6 @@ def get_depth(img, extrinsic, imgs, extrinsics, patch_size, depths):
     depthsmap = np.zeros(img.shape[:2])
     y, x = pts2d0[depths_mask, ...].T
     depthsmap[y, x] = depths[depths_idx[depths_mask]]
-    return depthsmap
+    pts2dxyz = np.concatenate([pts2d0[depths_mask], np.expand_dims(depths[depths_idx[depths_mask]], axis=1)], axis=1)
+    colors = img[y, x, ...]
+    return depthsmap, colors, pts2dxyz
