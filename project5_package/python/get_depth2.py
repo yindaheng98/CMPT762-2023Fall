@@ -34,14 +34,15 @@ def GetPatch(pts2d, img, patch_size):
     img : patch comes from which image
     patch_size: size of the patch
     """
-    # all provided image contains all the region, so do not need a mask
-    # ptsmapmask = (pts2dmap.reshape(-1, 2) < img.shape[:2]).reshape(pts2dmap.shape)
     w = (patch_size - 1) // 2
     patchidx_kernel = np.array(list(product(range(-w, w+1), range(-w, w+1)))).reshape((patch_size, patch_size, 2))
     patchidx = np.stack([pts2d] * patch_size ** 2).reshape((patch_size, patch_size, *pts2d.shape)).transpose(2, 0, 1, 3)
     patchidx += patchidx_kernel
-    y, x = patchidx.reshape(-1, 2).T
-    patch = img[y, x, ...].reshape((*patchidx.shape[0:3], -1))
+    pts2dmask = np.logical_and(0 <= patchidx, patchidx < img.shape[:2]).reshape(patchidx.shape[0], -1).all(axis=1)
+    patchidx_masked = patchidx[pts2dmask, ...]
+    y, x = patchidx_masked.reshape(-1, 2).T
+    patch = np.zeros((*patchidx.shape[0:3], *img.shape[2:])).astype(int)
+    patch[pts2dmask, ...] = img[y, x, ...].reshape((*patchidx_masked.shape[0:3], *img.shape[2:]))
     return patch
 
 
@@ -72,4 +73,5 @@ def get_depth(img, extrinsic, imgs, extrinsics, patch_size, depths):
         patch1 = patch1.reshape(*pts2d1.shape[0:2], *patch1.shape[1:])
         corr = ComputeConsistency(patch0, patch1)
         corr_total += corr
+    depths_idx = np.argmax(corr_total, axis=1)
     pass
