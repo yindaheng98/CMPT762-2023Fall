@@ -31,7 +31,7 @@ plt.axis('image')
 plt.savefig('../results/corners.png', dpi=300)
 plt.close()
 
-camera_pose = -np.dot(t, np.linalg.inv(R))
+camera_pose = -np.dot(t, np.linalg.inv(R).T)
 distance = np.linalg.norm(pts3d - camera_pose, axis=1)
 depths = np.linspace(np.min(distance), np.max(distance), 16)
 patch_size = 5
