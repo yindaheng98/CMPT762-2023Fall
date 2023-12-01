@@ -24,9 +24,9 @@ pts3d = np.array([(x, y, z) for x, y, z in product((minx, maxx), (miny, maxy), (
 K, R, t = extrinsics[img_names[0]]
 pts2d = np.dot(np.dot(pts3d, R.T) + t, K.T)
 pts2d = (pts2d[:, 0:2].T / pts2d[:, 2]).T.astype(int)
-im0 = cv2.cvtColor(cv2.imread("../data/" + img_names[0]), cv2.COLOR_BGR2RGB)
+im0 = cv2.imread("../data/" + img_names[0])
 plt.figure()
-plt.imshow(im0)
+plt.imshow(cv2.cvtColor(im0, cv2.COLOR_BGR2RGB))
 plt.scatter(x=pts2d[:, 0], y=pts2d[:, 1], marker='x')
 plt.axis('image')
 plt.savefig('../results/corners.png', dpi=300)
@@ -34,9 +34,9 @@ plt.close()
 
 camera_pose = -np.dot(t, np.linalg.inv(R).T)
 distance = np.linalg.norm(pts3d - camera_pose, axis=1)
-depths = np.linspace(np.min(distance), np.max(distance), 256)
+depths = np.linspace(np.min(distance), np.max(distance), 16)
 patch_size = 5
-depthsmap, colors, pts2dxyz = get_depth(
+depthsidxmap, colors, pts2dxyz = get_depth(
     im0,
     extrinsics[img_names[0]],
     [cv2.imread("../data/" + name) for name in img_names[1:]],
@@ -45,7 +45,7 @@ depthsmap, colors, pts2dxyz = get_depth(
 )
 
 plt.figure()
-plt.imshow(depthsmap, cmap='gray')
+plt.imshow(depthsidxmap, cmap='gray')
 plt.axis('image')
 plt.savefig('../results/depthsmap.png', dpi=300)
 plt.close()
