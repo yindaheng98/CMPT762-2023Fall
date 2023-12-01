@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+from itertools import product
 
 
 def Get3dCoord(pts2d, extrinsic, depths):
@@ -22,20 +23,38 @@ def GetProjCoord(pts3d, extrinsic):
     return (pts2d3.T/pts2d3[:, 2]).T[:, 0:2].reshape((n_pts, n_depths, 2)).astype(int)
 
 
-def GetProjCoordMap(pts2idx, pts3d, extrinsic, y_max, x_max):
-    pts2d = GetProjCoord(pts3d, extrinsic)
-    ptsmap = np.zeros((y_max, x_max, *pts2d.shape[1:])) - 1
-    ptsmap[pts2idx] = pts2d
-    return ptsmap
+def GetPatch(pts2d, img, patch_size):
+    """
+    Get patch by coordinates
+
+    Parameters
+    ----------
+    pts2d : coordinates, shape (n, 2), n is number of points, format y, x
+    img : patch comes from which image
+    patch_size: size of the patch
+    """
+    # all provided image contains all the region, so do not need a mask
+    # ptsmapmask = (pts2dmap.reshape(-1, 2) < img.shape[:2]).reshape(pts2dmap.shape)
+    w = (patch_size - 1) // 2
+    patchidx_kernel = np.array(list(product(range(-w, w+1), range(-w, w+1)))).reshape((patch_size, patch_size, 2))
+    patchidx = np.stack([pts2d] * patch_size ** 2).reshape((patch_size, patch_size, *pts2d.shape)).transpose(2, 0, 1, 3)
+    patchidx += patchidx_kernel
+    y, x = patchidx.reshape(-1, 2).T
+    patch = img[y, x, ...].reshape((*patchidx.shape[0:3], -1))
+    return patch
 
 
 def get_depth(img, extrinsic, imgs, extrinsics, patch_size, depths):
     """
     creates a depth map from a disparity map (DISPM).
     """
-    y_max, x_max = img.shape[:2]
     mask = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) > 40
-    pts2idx = np.where(mask)
-    pts3d = Get3dCoord(np.array(pts2idx).T, extrinsic, depths)
-    pts2dmaps = [GetProjCoordMap(pts2idx, pts3d, e, y_max, x_max) for e in extrinsics]
+    pts2d0 = np.array(np.where(mask)).T
+    pts3d = Get3dCoord(pts2d0, extrinsic, depths)
+    patch0 = GetPatch(pts2d0.reshape(-1, 2), img, patch_size)
+    for e, im in zip(extrinsics, imgs):
+        pts2d1 = GetProjCoord(pts3d, e)
+        patch1 = GetPatch(pts2d1.reshape(-1, 2), im, patch_size)
+        patch1 = patch1.reshape(*pts2d1.shape[0:2], *patch1.shape[1:])
+        pass
     pass
