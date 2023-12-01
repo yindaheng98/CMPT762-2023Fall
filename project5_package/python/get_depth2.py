@@ -44,6 +44,18 @@ def GetPatch(pts2d, img, patch_size):
     return patch
 
 
+def ComputeConsistency(patch0, patch1):
+    patch0 = patch0.reshape(patch0.shape[0], -1)
+    patch1 = patch1.reshape(*patch1.shape[0:2], -1)
+    patch0_mean, patch0_std = patch0.mean(axis=1), patch0.std(axis=1)
+    patch1_mean, patch1_std = patch1.mean(axis=2), patch1.std(axis=2)
+    mean = np.mean((patch0.T - patch0_mean).T * (patch1.transpose(2, 0, 1) - patch1_mean).transpose(2, 1, 0), axis=2)
+    std = patch0_std * patch1_std.T
+    std[std < 1e-6] = 1e-6
+    corr = (mean / std).T
+    return corr
+
+
 def get_depth(img, extrinsic, imgs, extrinsics, patch_size, depths):
     """
     creates a depth map from a disparity map (DISPM).
@@ -52,9 +64,11 @@ def get_depth(img, extrinsic, imgs, extrinsics, patch_size, depths):
     pts2d0 = np.array(np.where(mask)).T
     pts3d = Get3dCoord(pts2d0, extrinsic, depths)
     patch0 = GetPatch(pts2d0.reshape(-1, 2), img, patch_size)
+    corr_total = np.zeros((patch0.shape[0], len(depths)))
     for e, im in zip(extrinsics, imgs):
         pts2d1 = GetProjCoord(pts3d, e)
         patch1 = GetPatch(pts2d1.reshape(-1, 2), im, patch_size)
         patch1 = patch1.reshape(*pts2d1.shape[0:2], *patch1.shape[1:])
-        pass
+        corr = ComputeConsistency(patch0, patch1)
+        corr_total += corr
     pass
