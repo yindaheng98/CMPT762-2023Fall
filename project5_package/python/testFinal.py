@@ -35,10 +35,15 @@ camera_pose = -np.dot(t, np.linalg.inv(R).T)
 distance = np.linalg.norm(pts3d - camera_pose, axis=1)
 depths = np.linspace(np.min(distance), np.max(distance), 16)
 patch_size = 5
-depth = get_depth(
+depthsmap = get_depth(
     im0,
     extrinsics[img_names[0]],
     [cv2.imread("../data/" + name) for name in img_names[1:]],
     [extrinsics[name] for name in img_names[1:]],
     patch_size, depths
 )
+plt.figure()
+plt.imshow(depthsmap, cmap='gray')
+plt.axis('image')
+plt.savefig('../results/depthsmap.png', dpi=300)
+plt.close()

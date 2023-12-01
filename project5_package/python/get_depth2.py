@@ -66,12 +66,18 @@ def get_depth(img, extrinsic, imgs, extrinsics, patch_size, depths):
     pts2d0 = np.array(np.where(mask)).T
     pts3d = Get3dCoord(pts2d0, extrinsic, depths)
     patch0 = GetPatch(pts2d0.reshape(-1, 2), img, patch_size)
-    corr_total = np.zeros((patch0.shape[0], len(depths)))
+    n, corr_total = 0, np.zeros((patch0.shape[0], len(depths)))
     for e, im in zip(extrinsics, imgs):
         pts2d1 = GetProjCoord(pts3d, e)
         patch1 = GetPatch(pts2d1.reshape(-1, 2), im, patch_size)
         patch1 = patch1.reshape(*pts2d1.shape[0:2], *patch1.shape[1:])
         corr = ComputeConsistency(patch0, patch1)
         corr_total += corr
+        n += 1
+    corr_total /= n
     depths_idx = np.argmax(corr_total, axis=1)
-    pass
+    depths_mask = np.max(corr_total, axis=1) < 1e-6
+    depthsmap = np.zeros(img.shape[:2])
+    y, x = pts2d0[depths_mask, ...].T
+    depthsmap[y, x] = depths[depths_idx[depths_mask]]
+    return depthsmap
