@@ -35,16 +35,25 @@ def GetPatch(pts2d, img, patch_size):
     patch_size: size of the patch
     """
     w = (patch_size - 1) // 2
-    patchidx_kernel = np.array(list(product(range(-w, w+1), range(-w, w+1)))).reshape((patch_size, patch_size, 2))
-    patchidx = np.stack([pts2d] * patch_size ** 2).reshape((patch_size, patch_size, *pts2d.shape)).transpose(2, 0, 1, 3)
+    patchidx_kernel = np.array(list(product(range(-w, w+1), range(-w, w+1))))
+    patchidx = np.stack([pts2d] * patch_size ** 2, axis=1)
     patchidx += patchidx_kernel
-    pts2dmask = np.logical_and(0 <= patchidx, patchidx < img.shape[:2]).reshape(patchidx.shape[0], -1).all(axis=1)
+    pts2dmask = np.logical_and(0 <= patchidx, patchidx < img.shape[:2]).all(axis=2)
     patchidx_masked = patchidx[pts2dmask, ...]
-    y, x = patchidx_masked.reshape(-1, 2).T
-    patch = np.zeros((*patchidx.shape[0:3], *img.shape[2:])).astype(int)
-    patch[pts2dmask, ...] = img[y, x, ...].reshape((*patchidx_masked.shape[0:3], *img.shape[2:]))
+    y, x = patchidx_masked.T
+    patch = np.zeros((*patchidx.shape[0:2], *img.shape[2:])).astype(int)
+    patch[pts2dmask, ...] = img[y, x, ...]
     return patch
 
+def save_patch(patch0, patch1): # for debug
+    import random
+    n, s = patch0.shape[:2]
+    patch_size = int(np.sqrt(s))
+    patch_shape = (patch_size, patch_size, patch0.shape[2])
+    k = random.randint(0, n)
+    cv2.imwrite(f"../results/patch/patch{k}.png", patch0[k, ...].reshape(patch_shape))
+    for i in range(patch1.shape[1]):
+        cv2.imwrite(f"../results/patch/patch{k}-{i}.png", patch1[k, i, ...].reshape(patch_shape))
 
 def ComputeConsistency(patch0, patch1):
     patch0 = patch0.reshape(patch0.shape[0], -1)
@@ -58,11 +67,10 @@ def ComputeConsistency(patch0, patch1):
     return corr
 
 
-def get_depth(img, extrinsic, imgs, extrinsics, patch_size, depths):
+def get_depth(img, extrinsic, mask, imgs, extrinsics, patch_size, depths):
     """
     creates a depth map from a disparity map (DISPM).
     """
-    mask = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) > 40
     pts2d0 = np.array(np.where(mask)).T
     pts3d = Get3dCoord(pts2d0, extrinsic, depths)
     patch0 = GetPatch(pts2d0.reshape(-1, 2), img, patch_size)
@@ -76,10 +84,14 @@ def get_depth(img, extrinsic, imgs, extrinsics, patch_size, depths):
         n += 1
     corr_total /= n
     depths_idx = np.argmax(corr_total, axis=1)
-    depths_mask = np.max(corr_total, axis=1) < 1e-6
-    depthsmap = np.zeros(img.shape[:2])
+    depths_mask = np.max(corr_total, axis=1) > 1e-6
+    depthsidxmap, depthsmap = np.zeros(img.shape[:2]).astype(int), np.zeros(img.shape[:2])
     y, x = pts2d0[depths_mask, ...].T
+    depthsidxmap[y, x] = depths_idx[depths_mask]
     depthsmap[y, x] = depths[depths_idx[depths_mask]]
+    K, R, t = extrinsic
     pts2dxyz = np.concatenate([pts2d0[depths_mask], np.expand_dims(depths[depths_idx[depths_mask]], axis=1)], axis=1)
+    P = np.dot(K, np.concatenate((R.T, [t])).T)
+    pts3d = np.dot(pts2dxyz - P[:, 3], np.linalg.inv(P[:, 0:3]).T)
     colors = img[y, x, ...]
-    return depthsmap, colors, pts2dxyz
+    return pts3d, colors, depthsmap, depthsidxmap

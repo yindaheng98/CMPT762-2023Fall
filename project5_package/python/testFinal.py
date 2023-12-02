@@ -36,23 +36,29 @@ camera_pose = -np.dot(t, np.linalg.inv(R).T)
 distance = np.linalg.norm(pts3d - camera_pose, axis=1)
 depths = np.linspace(np.min(distance), np.max(distance), 16)
 patch_size = 5
-depthsidxmap, colors, pts2dxyz = get_depth(
+mask = cv2.cvtColor(im0, cv2.COLOR_BGR2GRAY) > 40
+pts3d, colors, depthsmap, depthsidxmap = get_depth(
     im0,
     extrinsics[img_names[0]],
+    mask,
     [cv2.imread("../data/" + name) for name in img_names[1:]],
     [extrinsics[name] for name in img_names[1:]],
     patch_size, depths
 )
 
 plt.figure()
-plt.imshow(depthsidxmap, cmap='gray')
+plt.imshow(depthsmap, cmap='gray')
 plt.axis('image')
 plt.savefig('../results/depthsmap.png', dpi=300)
 plt.close()
 
-P = np.dot(K, np.concatenate((R.T, [t])).T)
-pts3d = np.dot(pts2dxyz - P[:, 3], np.linalg.inv(P[:, 0:3]).T)
+plt.figure()
+plt.imshow(depthsidxmap, cmap='gray')
+plt.axis('image')
+plt.savefig('../results/depthsidxmap.png', dpi=300)
+plt.close()
+
 pcd = o3d.geometry.PointCloud()
 pcd.points = o3d.utility.Vector3dVector(pts3d)
-pcd.colors = o3d.utility.Vector3dVector(colors / 255)
+pcd.colors = o3d.utility.Vector3dVector(colors[:, [2, 1, 0]] / 255)
 o3d.io.write_point_cloud("../results/temple.pcd", pcd)
