@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 from get_depth2 import GetProjCoord, get_depth
 
-extrinsics = {}
+KRts = {}
 img_names = []
 with open("../data/templeR_par.txt", "r") as f:
     for line in f.readlines():
@@ -15,7 +15,7 @@ with open("../data/templeR_par.txt", "r") as f:
         K = np.array(data[0:9]).reshape((3, 3))
         R = np.array(data[9:18]).reshape((3, 3))
         t = np.array(data[18:21])
-        extrinsics[split[0]] = (K, R, t)
+        KRts[split[0]] = (K, R, t)
         img_names.append(split[0])
 
 minx, miny, minz = -0.023121, -0.038009, -0.091940
@@ -23,7 +23,7 @@ maxx, maxy, maxz = 0.078626, 0.121636, -0.017395
 pts3d = np.array([(x, y, z) for x, y, z in product((minx, maxx), (miny, maxy), (minz, maxz))])
 for i in range(len(img_names)):
     name = img_names[i]
-    pts2d = GetProjCoord(pts3d, extrinsics[name])
+    pts2d = GetProjCoord(pts3d, KRts[name])
     img = cv2.imread("../data/" + name)
     plt.figure()
     plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
@@ -34,20 +34,20 @@ for i in range(len(img_names)):
 
 camera_pose = -np.dot(t, np.linalg.inv(R).T)
 distance = np.linalg.norm(pts3d - camera_pose, axis=1)
-depths = np.linspace(np.min(distance), np.max(distance), 16)
+depths = np.linspace(np.min(distance), np.max(distance), 128)
 patch_size = 5
 img = cv2.imread("../data/" + img_names[0])
 mask = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) > 64
 debug_img = np.zeros_like(img)
 debug_img[mask, :] = img[mask, :]
 cv2.imwrite('../results/debug/maskedimg.png', debug_img)
-corr_thr = 0.5
+corr_thr = 0.8
 pts3d, colors, depthsmap, depthsidxmap = get_depth(
     img,
-    extrinsics[img_names[0]],
+    KRts[img_names[0]],
     mask,
     [cv2.imread("../data/" + name) for name in img_names[1:]],
-    [extrinsics[name] for name in img_names[1:]],
+    [KRts[name] for name in img_names[1:]],
     patch_size, depths, corr_thr
 )
 

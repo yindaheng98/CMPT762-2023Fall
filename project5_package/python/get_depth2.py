@@ -3,9 +3,9 @@ import cv2
 from itertools import product
 
 
-def Get3dCoord(pts2d, extrinsic, depths):
+def Get3dCoord(pts2d, KRt, depths):
     n_pts, n_depths = pts2d.shape[0], depths.shape[0]
-    K, R, t = extrinsic
+    K, R, t = KRt
     P = np.dot(K, np.concatenate((R.T, [t])).T)
     pts2d_depths = np.stack([pts2d] * depths.shape[0], axis=1) * np.stack([depths] * pts2d.shape[1], axis=1)
     pts2dz = np.expand_dims(np.zeros(pts2d_depths.shape[0:2]) + depths, axis=2)
@@ -17,8 +17,8 @@ def Get3dCoord(pts2d, extrinsic, depths):
     return pts3d
 
 
-def GetProjCoord(pts3d, extrinsic):
-    K, R, t = extrinsic
+def GetProjCoord(pts3d, KRt):
+    K, R, t = KRt
     pts2d = np.dot(np.dot(pts3d, R.T) + t, K.T)
     return (pts2d[:, 0:2].T / pts2d[:, 2]).T.astype(int)
 
@@ -95,17 +95,17 @@ def ComputeConsistency(patch0, patch1):
     return corr
 
 
-def get_depth(img, extrinsic, mask, imgs, extrinsics, patch_size, depths, corr_thr):
+def get_depth(img, KRt, mask, imgs, KRts, patch_size, depths, corr_thr):
     """
     creates a depth map from a disparity map (DISPM).
     """
     pts2d0 = np.array(np.where(mask)).T[:, ::-1]
-    pts3d = Get3dCoord(pts2d0, extrinsic, depths)
+    pts3d = Get3dCoord(pts2d0, KRt, depths)
     n_pts, n_depths = pts3d.shape[:2]
-    debug_SaveProjCoord(GetProjCoord(pts3d.reshape((-1, 3)), extrinsic).reshape((n_pts, n_depths, 2)), img)
+    debug_SaveProjCoord(GetProjCoord(pts3d.reshape((-1, 3)), KRt).reshape((n_pts, n_depths, 2)), img)
     patch0 = GetPatch(pts2d0.reshape(-1, 2), img, patch_size)
     n, corr_total = 0, np.zeros((patch0.shape[0], len(depths)))
-    for e, im in zip(extrinsics, imgs):
+    for e, im in zip(KRts, imgs):
         pts2d1 = GetProjCoord(pts3d.reshape((-1, 3)), e).reshape((n_pts, n_depths, 2))
         debug_SaveProjCoord(pts2d1, im)
         patch1 = GetPatch(pts2d1.reshape(-1, 2), im, patch_size)
@@ -121,7 +121,7 @@ def get_depth(img, extrinsic, mask, imgs, extrinsics, patch_size, depths, corr_t
     x, y = pts2d0[depths_mask, ...].T
     depthsidxmap[y, x] = depths_idx[depths_mask]
     depthsmap[y, x] = depths[depths_idx[depths_mask]]
-    K, R, t = extrinsic
+    K, R, t = KRt
     pts2dxyz = np.concatenate([pts2d0[depths_mask], np.expand_dims(depths[depths_idx[depths_mask]], axis=1)], axis=1)
     P = np.dot(K, np.concatenate((R.T, [t])).T)
     pts3d = np.dot(pts2dxyz - P[:, 3], np.linalg.inv(P[:, 0:3]).T)
