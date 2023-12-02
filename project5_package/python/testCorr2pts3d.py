@@ -27,6 +27,10 @@ corr_thr = 0.84
 pts3d, colors, depthsmap, depthsidxmap = get_depth(
     img, KRts[img_names[0]], pts2d0, corr, depths, corr_thr
 )
+color_thr = 0.25
+color_mask = np.linalg.norm(colors, axis=1) / np.sqrt(3*255**2) > color_thr
+pts3d = pts3d[color_mask, :]
+colors = colors[color_mask, :]
 
 plt.figure()
 plt.imshow(depthsmap, cmap='gray')
