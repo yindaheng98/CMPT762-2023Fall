@@ -33,14 +33,14 @@ def debug_SaveProjCoord(pts2d, img):
     plt.figure()
     plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     for i in range(0, pts2d.shape[0], 100):
-        y, x = pts2d[i, [0, -1], :].T
-        plt.plot(x, y, linewidth=1)
+        y, x = pts2d[i, :, :].T
+        plt.scatter(x=x, y=y, marker=".", s=1)
     global debug_SaveProjCoord_n
-    debug_SaveProjCoord_n += 1
     plt.axis('image')
     os.makedirs(f"../results/debug", exist_ok=True)
     plt.savefig(f'../results/debug/{debug_SaveProjCoord_n}.png', dpi=300)
     plt.close()
+    debug_SaveProjCoord_n += 1
 
 
 def GetPatch(pts2d, img, patch_size):
@@ -101,6 +101,7 @@ def get_depth(img, extrinsic, mask, imgs, extrinsics, patch_size, depths):
     """
     pts2d0 = np.array(np.where(mask)).T
     pts3d = Get3dCoord(pts2d0, extrinsic, depths)
+    debug_SaveProjCoord(GetProjCoord(pts3d, extrinsic), img)
     patch0 = GetPatch(pts2d0.reshape(-1, 2), img, patch_size)
     n, corr_total = 0, np.zeros((patch0.shape[0], len(depths)))
     for e, im in zip(extrinsics, imgs):
