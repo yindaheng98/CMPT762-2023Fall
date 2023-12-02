@@ -30,6 +30,7 @@ for i in range(len(img_names)):
     plt.scatter(x=pts2d[:, 0], y=pts2d[:, 1], marker='x')
     plt.axis('image')
     plt.savefig(f'../results/corners{i}.png', dpi=300)
+    plt.savefig(f'../results/corners{i}.pdf', dpi=300)
     plt.close()
 
 camera_pose = -np.dot(t, np.linalg.inv(R).T)
@@ -55,12 +56,14 @@ plt.figure()
 plt.imshow(depthsmap, cmap='gray')
 plt.axis('image')
 plt.savefig('../results/depthsmap.png', dpi=300)
+plt.savefig('../results/depthsmap.pdf')
 plt.close()
 
 plt.figure()
 plt.imshow(depthsidxmap, cmap='gray')
 plt.axis('image')
 plt.savefig('../results/depthsidxmap.png', dpi=300)
+plt.savefig('../results/depthsidxmap.pdf')
 plt.close()
 
 pcd = o3d.geometry.PointCloud()
