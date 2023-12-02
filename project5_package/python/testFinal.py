@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import open3d as o3d
-from get_depth2 import GetProjCoord, get_depth
+from get_depth2 import GetProjCoord, get_corr, get_depth
 
 KRts = {}
 img_names = []
@@ -35,21 +35,30 @@ for i in range(len(img_names)):
 
 camera_pose = -np.dot(t, np.linalg.inv(R).T)
 distance = np.linalg.norm(pts3d - camera_pose, axis=1)
-depths = np.linspace(np.min(distance), np.max(distance), 256)
+depths = np.linspace(np.min(distance), np.max(distance), 16)
 patch_size = 5
 img = cv2.imread("../data/" + img_names[0])
-mask = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) > 64
+mask = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) > 32
+pts2d0 = np.array(np.where(mask)).T[:, ::-1]
 debug_img = np.zeros_like(img)
 debug_img[mask, :] = img[mask, :]
 cv2.imwrite('../results/debug/maskedimg.png', debug_img)
-corr_thr = 0.72
-pts3d, colors, depthsmap, depthsidxmap = get_depth(
+corr = get_corr(
     img,
     KRts[img_names[0]],
-    mask,
+    pts2d0,
     [cv2.imread("../data/" + name) for name in img_names[1:]],
     [KRts[name] for name in img_names[1:]],
-    patch_size, depths, corr_thr
+    patch_size, depths
+)
+np.savez("../results/pts2dcorr.npz", pts2d0=pts2d0, corr=corr)
+
+pts2dcorr = np.load("../results/pts2dcorr.npz")
+pts2d0 = pts2dcorr['pts2d0']
+corr = pts2dcorr['corr']
+corr_thr = 0.84
+pts3d, colors, depthsmap, depthsidxmap = get_depth(
+    img, KRts[img_names[0]], pts2d0, corr, depths, corr_thr
 )
 
 plt.figure()
