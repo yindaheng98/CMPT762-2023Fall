@@ -32,7 +32,7 @@ def debug_SaveProjCoord(pts2d, img):
     plt.figure()
     plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     for i in range(0, pts2d.shape[0], 100):
-        y, x = pts2d[i, :, :].T
+        x, y = pts2d[i, :, :].T
         plt.scatter(x=x, y=y, marker=".", s=1)
     global debug_SaveProjCoord_n
     plt.axis('image')
@@ -53,12 +53,13 @@ def GetPatch(pts2d, img, patch_size):
     patch_size: size of the patch
     """
     w = (patch_size - 1) // 2
+    y_max, x_max = img.shape[:2]
     patchidx_kernel = np.array(list(product(range(-w, w+1), range(-w, w+1))))
     patchidx = np.stack([pts2d] * patch_size ** 2, axis=1)
     patchidx += patchidx_kernel
-    pts2dmask = np.logical_and(0 <= patchidx, patchidx < img.shape[:2]).all(axis=2)
+    pts2dmask = np.logical_and(0 <= patchidx, patchidx < np.array([x_max, y_max])).all(axis=2)
     patchidx_masked = patchidx[pts2dmask, ...]
-    y, x = patchidx_masked.T
+    x, y = patchidx_masked.T
     patch = np.zeros((*patchidx.shape[0:2], *img.shape[2:])).astype(int)
     patch[pts2dmask, ...] = img[y, x, ...]
     return patch
@@ -98,7 +99,7 @@ def get_depth(img, extrinsic, mask, imgs, extrinsics, patch_size, depths):
     """
     creates a depth map from a disparity map (DISPM).
     """
-    pts2d0 = np.array(np.where(mask)).T
+    pts2d0 = np.array(np.where(mask)).T[:, ::-1]
     pts3d = Get3dCoord(pts2d0, extrinsic, depths)
     n_pts, n_depths = pts3d.shape[:2]
     debug_SaveProjCoord(GetProjCoord(pts3d.reshape((-1, 3)), extrinsic).reshape((n_pts, n_depths, 2)), img)
@@ -117,7 +118,7 @@ def get_depth(img, extrinsic, mask, imgs, extrinsics, patch_size, depths):
     depths_idx = np.argmax(corr_total, axis=1)
     depths_mask = np.max(corr_total, axis=1) > 1e-6
     depthsidxmap, depthsmap = np.zeros(img.shape[:2]).astype(int), np.zeros(img.shape[:2])
-    y, x = pts2d0[depths_mask, ...].T
+    x, y = pts2d0[depths_mask, ...].T
     depthsidxmap[y, x] = depths_idx[depths_mask]
     depthsmap[y, x] = depths[depths_idx[depths_mask]]
     K, R, t = extrinsic
