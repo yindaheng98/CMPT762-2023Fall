@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 import matplotlib.pyplot as plt
 import open3d as o3d
-from get_depth2 import get_depth
+from get_depth2 import GetProjCoord, get_depth
 
 extrinsics = {}
 img_names = []
@@ -21,24 +21,25 @@ with open("../data/templeR_par.txt", "r") as f:
 minx, miny, minz = -0.023121, -0.038009, -0.091940
 maxx, maxy, maxz = 0.078626, 0.121636, -0.017395
 pts3d = np.array([(x, y, z) for x, y, z in product((minx, maxx), (miny, maxy), (minz, maxz))])
-K, R, t = extrinsics[img_names[0]]
-pts2d = np.dot(np.dot(pts3d, R.T) + t, K.T)
-pts2d = (pts2d[:, 0:2].T / pts2d[:, 2]).T.astype(int)
-im0 = cv2.imread("../data/" + img_names[0])
-plt.figure()
-plt.imshow(cv2.cvtColor(im0, cv2.COLOR_BGR2RGB))
-plt.scatter(x=pts2d[:, 0], y=pts2d[:, 1], marker='x')
-plt.axis('image')
-plt.savefig('../results/corners.png', dpi=300)
-plt.close()
+for i in range(len(img_names)):
+    name = img_names[i]
+    pts2d = GetProjCoord(pts3d, extrinsics[name])
+    img = cv2.imread("../data/" + name)
+    plt.figure()
+    plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    plt.scatter(x=pts2d[:, 0], y=pts2d[:, 1], marker='x')
+    plt.axis('image')
+    plt.savefig(f'../results/corners{i}.png', dpi=300)
+    plt.close()
 
 camera_pose = -np.dot(t, np.linalg.inv(R).T)
 distance = np.linalg.norm(pts3d - camera_pose, axis=1)
 depths = np.linspace(np.min(distance), np.max(distance), 16)
 patch_size = 5
-mask = cv2.cvtColor(im0, cv2.COLOR_BGR2GRAY) > 40
+img = cv2.imread("../data/" + img_names[0])
+mask = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) > 40
 pts3d, colors, depthsmap, depthsidxmap = get_depth(
-    im0,
+    img,
     extrinsics[img_names[0]],
     mask,
     [cv2.imread("../data/" + name) for name in img_names[1:]],

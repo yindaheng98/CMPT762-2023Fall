@@ -19,9 +19,8 @@ def Get3dCoord(pts2d, extrinsic, depths):
 
 def GetProjCoord(pts3d, extrinsic):
     K, R, t = extrinsic
-    n_pts, n_depths = pts3d.shape[0:2]
-    pts2d3 = np.dot(np.dot(pts3d.reshape((n_pts * n_depths, 3)), R.T) + t, K.T)
-    return (pts2d3.T/pts2d3[:, 2]).T[:, 0:2].reshape((n_pts, n_depths, 2)).astype(int)
+    pts2d = np.dot(np.dot(pts3d, R.T) + t, K.T)
+    return (pts2d[:, 0:2].T / pts2d[:, 2]).T.astype(int)
 
 
 debug_SaveProjCoord_n = 0
@@ -101,11 +100,12 @@ def get_depth(img, extrinsic, mask, imgs, extrinsics, patch_size, depths):
     """
     pts2d0 = np.array(np.where(mask)).T
     pts3d = Get3dCoord(pts2d0, extrinsic, depths)
-    debug_SaveProjCoord(GetProjCoord(pts3d, extrinsic), img)
+    n_pts, n_depths = pts3d.shape[:2]
+    debug_SaveProjCoord(GetProjCoord(pts3d.reshape((-1, 3)), extrinsic).reshape((n_pts, n_depths, 2)), img)
     patch0 = GetPatch(pts2d0.reshape(-1, 2), img, patch_size)
     n, corr_total = 0, np.zeros((patch0.shape[0], len(depths)))
     for e, im in zip(extrinsics, imgs):
-        pts2d1 = GetProjCoord(pts3d, e)
+        pts2d1 = GetProjCoord(pts3d.reshape((-1, 3)), e).reshape((n_pts, n_depths, 2))
         debug_SaveProjCoord(pts2d1, im)
         patch1 = GetPatch(pts2d1.reshape(-1, 2), im, patch_size)
         patch1 = patch1.reshape(*pts2d1.shape[0:2], *patch1.shape[1:])
