@@ -24,6 +24,25 @@ def GetProjCoord(pts3d, extrinsic):
     return (pts2d3.T/pts2d3[:, 2]).T[:, 0:2].reshape((n_pts, n_depths, 2)).astype(int)
 
 
+debug_SaveProjCoord_n = 0
+
+
+def debug_SaveProjCoord(pts2d, img):
+    import os
+    import matplotlib.pyplot as plt
+    plt.figure()
+    plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    for i in range(0, pts2d.shape[0], 100):
+        y, x = pts2d[i, [0, -1], :].T
+        plt.plot(x, y, linewidth=1)
+    global debug_SaveProjCoord_n
+    debug_SaveProjCoord_n += 1
+    plt.axis('image')
+    os.makedirs(f"../results/debug", exist_ok=True)
+    plt.savefig(f'../results/debug/{debug_SaveProjCoord_n}.png', dpi=300)
+    plt.close()
+
+
 def GetPatch(pts2d, img, patch_size):
     """
     Get patch by coordinates
@@ -45,15 +64,24 @@ def GetPatch(pts2d, img, patch_size):
     patch[pts2dmask, ...] = img[y, x, ...]
     return patch
 
-def save_patch(patch0, patch1): # for debug
+
+debug_SavePatch_n = 0
+
+
+def debug_SavePatch(patch0, patch1):  # for debug
     import random
+    import os
     n, s = patch0.shape[:2]
     patch_size = int(np.sqrt(s))
     patch_shape = (patch_size, patch_size, patch0.shape[2])
     k = random.randint(0, n)
-    cv2.imwrite(f"../results/patch/patch{k}.png", patch0[k, ...].reshape(patch_shape))
+    global debug_SavePatch_n
+    debug_SavePatch_n += 1
+    os.makedirs(f"../results/debug/patch{debug_SavePatch_n}", exist_ok=True)
+    cv2.imwrite(f"../results/debug/patch{debug_SavePatch_n}/0.png", patch0[k, ...].reshape(patch_shape))
     for i in range(patch1.shape[1]):
-        cv2.imwrite(f"../results/patch/patch{k}-{i}.png", patch1[k, i, ...].reshape(patch_shape))
+        cv2.imwrite(f"../results/debug/patch{debug_SavePatch_n}/{i+1}.png", patch1[k, i, ...].reshape(patch_shape))
+
 
 def ComputeConsistency(patch0, patch1):
     patch0 = patch0.reshape(patch0.shape[0], -1)
@@ -77,8 +105,10 @@ def get_depth(img, extrinsic, mask, imgs, extrinsics, patch_size, depths):
     n, corr_total = 0, np.zeros((patch0.shape[0], len(depths)))
     for e, im in zip(extrinsics, imgs):
         pts2d1 = GetProjCoord(pts3d, e)
+        debug_SaveProjCoord(pts2d1, im)
         patch1 = GetPatch(pts2d1.reshape(-1, 2), im, patch_size)
         patch1 = patch1.reshape(*pts2d1.shape[0:2], *patch1.shape[1:])
+        debug_SavePatch(patch0, patch1)
         corr = ComputeConsistency(patch0, patch1)
         corr_total += corr
         n += 1
