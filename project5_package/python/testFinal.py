@@ -34,8 +34,8 @@ plt.close()
 
 camera_pose = -np.dot(t, np.linalg.inv(R).T)
 distance = np.linalg.norm(pts3d - camera_pose, axis=1)
-depths = np.linspace(np.min(distance), np.max(distance), 32)
-patch_size = 7
+depths = np.linspace(np.min(distance), np.max(distance), 16)
+patch_size = 5
 mask = cv2.cvtColor(im0, cv2.COLOR_BGR2GRAY) > 40
 pts3d, colors, depthsmap, depthsidxmap = get_depth(
     im0,
