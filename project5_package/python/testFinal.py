@@ -37,14 +37,18 @@ distance = np.linalg.norm(pts3d - camera_pose, axis=1)
 depths = np.linspace(np.min(distance), np.max(distance), 16)
 patch_size = 5
 img = cv2.imread("../data/" + img_names[0])
-mask = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) > 40
+mask = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) > 64
+debug_img = np.zeros_like(img)
+debug_img[mask, :] = img[mask, :]
+cv2.imwrite('../results/debug/maskedimg.png', debug_img)
+corr_thr = 0.5
 pts3d, colors, depthsmap, depthsidxmap = get_depth(
     img,
     extrinsics[img_names[0]],
     mask,
     [cv2.imread("../data/" + name) for name in img_names[1:]],
     [extrinsics[name] for name in img_names[1:]],
-    patch_size, depths
+    patch_size, depths, corr_thr
 )
 
 plt.figure()

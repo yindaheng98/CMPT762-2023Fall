@@ -95,7 +95,7 @@ def ComputeConsistency(patch0, patch1):
     return corr
 
 
-def get_depth(img, extrinsic, mask, imgs, extrinsics, patch_size, depths):
+def get_depth(img, extrinsic, mask, imgs, extrinsics, patch_size, depths, corr_thr):
     """
     creates a depth map from a disparity map (DISPM).
     """
@@ -116,7 +116,7 @@ def get_depth(img, extrinsic, mask, imgs, extrinsics, patch_size, depths):
         n += 1
     corr_total /= n
     depths_idx = np.argmax(corr_total, axis=1)
-    depths_mask = np.max(corr_total, axis=1) > 1e-6
+    depths_mask = np.max(corr_total, axis=1) > corr_thr
     depthsidxmap, depthsmap = np.zeros(img.shape[:2]).astype(int), np.zeros(img.shape[:2])
     x, y = pts2d0[depths_mask, ...].T
     depthsidxmap[y, x] = depths_idx[depths_mask]
