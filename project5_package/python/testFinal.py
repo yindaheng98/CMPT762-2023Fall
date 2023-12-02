@@ -34,14 +34,14 @@ for i in range(len(img_names)):
 
 camera_pose = -np.dot(t, np.linalg.inv(R).T)
 distance = np.linalg.norm(pts3d - camera_pose, axis=1)
-depths = np.linspace(np.min(distance), np.max(distance), 128)
+depths = np.linspace(np.min(distance), np.max(distance), 256)
 patch_size = 5
 img = cv2.imread("../data/" + img_names[0])
 mask = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) > 64
 debug_img = np.zeros_like(img)
 debug_img[mask, :] = img[mask, :]
 cv2.imwrite('../results/debug/maskedimg.png', debug_img)
-corr_thr = 0.8
+corr_thr = 0.72
 pts3d, colors, depthsmap, depthsidxmap = get_depth(
     img,
     KRts[img_names[0]],
